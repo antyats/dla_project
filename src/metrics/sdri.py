@@ -1,15 +1,15 @@
 import torch
-from torchmetrics.functional import scale_invariant_signal_noise_ratio
+from torchmetrics.functional import signal_distortion_ratio
 
 from src.metrics.base_metric import BaseMetric
 
 
-class SI_SNRi(BaseMetric):
+class SDRi(BaseMetric):
     def __init__(
         self, name: str | None = None, reduction: str = "mean", *args, **kwargs
     ) -> None:
         """
-        SI-SNR metric class.
+        SDRi metric class.
 
         Args:
             name (str | None): metric name to use in logger and writer.
@@ -25,18 +25,18 @@ class SI_SNRi(BaseMetric):
         self, input: torch.Tensor, output: torch.Tensor, target: torch.Tensor, **kwargs
     ) -> torch.Tensor:
         """
-        SI-SNR calculation logic.
+        SDRi calculation logic.
 
         Args:
             input (Tensor): model audio inputs (unseparated audio). Shape: (..., time)
             output (Tensor): model output predictions (separated audio). Shape: (..., time)
             target (Tensor): ground-truth audio. Shape: (..., time)
         Returns:
-            metric (Tensor): calculated SI-SNR.
+            metric (Tensor): calculated SDRi.
         """
-        sisnr_input = scale_invariant_signal_noise_ratio(input, target)
-        sisnr_output = scale_invariant_signal_noise_ratio(output, target)
-        result = sisnr_output - sisnr_input
+        sdr_input = signal_distortion_ratio(input, target)
+        sdr_output = signal_distortion_ratio(output, target)
+        result = sdr_output - sdr_input
 
         if self.reduction == "mean":
             return result.mean()
