@@ -1,13 +1,13 @@
 from src.datasets.base_dataset import BaseDataset
 
-class DLADataset(BaseDataset):
+class CustomDataset(BaseDataset):
     def __init__(self, data_dir, *args, **kwargs):
         assert data_dir.is_dir(), f"The folder {data_dir} does not exist"
 
         index = []
         for path in (data_dir / "audio" / "mix").iterdir():
             entry = {}
-            if path.suffix in [".waw", ".flac", ".mp3"]:
+            if path.suffix in [".wav", ".flac", ".mp3"]:
                 entry["mix_audio_path"] = str(path)
                 speaker1_id, speaker2_id = path.stem.split('_')
                 entry["speaker1_video_path"] = str(data_dir / "video" / (speaker1_id + ".npz"))

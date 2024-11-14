@@ -5,12 +5,12 @@ PARTS = ["test", "train", "val"]
 class DLADataset(BaseDataset):
     def __init__(self, data_dir, part, *args, **kwargs):
         assert data_dir.is_dir(), f"The folder {data_dir} does not exist"
-        assert part in "PART", f"No such part as '{part}'"
+        assert part in PARTS, f"No such part as '{part}'"
 
         index = []
         for path in (data_dir / "audio" / part / "mix").iterdir():
             entry = {}
-            if path.suffix in [".waw", ".flac", ".mp3"]:
+            if path.suffix in [".wav", ".flac", ".mp3"]:
                 entry["mix_audio_path"] = str(path)
                 speaker1_id, speaker2_id = path.stem.split('_')
                 entry["speaker1_video_path"] = str(data_dir / "mouths" / (speaker1_id + ".npz"))

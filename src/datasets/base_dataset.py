@@ -20,7 +20,12 @@ class BaseDataset(Dataset):
     """
 
     def __init__(
-        self, index, limit=None, shuffle_index=False, instance_transforms=None
+        self,
+        index,
+        target_sr=16000,
+        limit=None,
+        shuffle_index=False,
+        instance_transforms=None
     ):
         """
         Args:
@@ -39,6 +44,8 @@ class BaseDataset(Dataset):
 
         index = self._shuffle_and_limit_index(index, limit, shuffle_index)
         self._index: List[dict] = index
+        
+        self.target_sr = target_sr
 
         self.instance_transforms = instance_transforms
 
@@ -80,13 +87,13 @@ class BaseDataset(Dataset):
             "mix_audio" : mix_audio,
             "mix_audio_len": mix_audio.size(-1),
             "mix_spectrogram": mix_spectrogram,
-            "mix_spectrogram_len": mix_spectrogram.size(-1),
+            "mix_spectrogram_len": mix_spectrogram.size(-1) if mix_spectrogram is not None else None,
 
             "video1": speaker1_video,
-            "video1_length": speaker1_video.size(0),
+            "video1_len": speaker1_video.size(0),
 
             "video2": speaker2_video,
-            "video2_length": speaker2_video.size(0),
+            "video2_len": speaker2_video.size(0),
         }
         if (speaker1_audio_path and speaker1_audio_path) is not None:
             speaker1_audio = self.load_audio(speaker1_audio_path)
@@ -98,12 +105,12 @@ class BaseDataset(Dataset):
                 "speaker1_audio": speaker1_audio,
                 "speaker1_audio_len": speaker1_audio.size(-1),
                 "speaker1_spectrogram": speaker1_spectrogram,
-                "speaker1_spectrogram_len": speaker1_spectrogram.size(-1),
+                "speaker1_spectrogram_len": speaker1_spectrogram.size(-1) if speaker1_spectrogram is not None else None,
 
                 "speaker2_audio": speaker2_audio,
                 "speaker2_audio_len": speaker2_audio.size(-1),
                 "speaker2_spectrogram": speaker2_spectrogram,
-                "speaker2_spectrogram_len": speaker2_spectrogram.size(-1),
+                "speaker2_spectrogram_len": speaker2_spectrogram.size(-1) if speaker2_spectrogram is not None else None,
             })
 
         return instance_data
@@ -162,29 +169,6 @@ class BaseDataset(Dataset):
                     video = self.instance_transforms[transform_name](video)
         return video
 
-    # @staticmethod
-    # def _filter_records_from_dataset(
-    #     index: list,
-    # ) -> list:
-    #     """
-    #     Filter some of the elements from the dataset depending on
-    #     some condition.
-
-    #     This is not used in the example. The method should be called in
-    #     the __init__ before shuffling and limiting.
-
-    #     Args:
-    #         index (list[dict]): list, containing dict for each element of
-    #             the dataset. The dict has required metadata information,
-    #             such as label and object path.
-    #     Returns:
-    #         index (list[dict]): list, containing dict for each element of
-    #             the dataset that satisfied the condition. The dict has
-    #             required metadata information, such as label and object path.
-    #     """
-    #     # Filter logic
-    #     pass
-
     @staticmethod
     def _assert_index_is_valid(index):
         """
@@ -212,25 +196,6 @@ class BaseDataset(Dataset):
             assert "speaker2_audio_path" in entry, (
                 "Each dataset item should include field 'speaker2_audio_path' - None / path to file, that contains ground truth for the speaker2"
             )
-
-    # @staticmethod
-    # def _sort_index(index):
-    #     """
-    #     Sort index via some rules.
-
-    #     This is not used in the example. The method should be called in
-    #     the __init__ before shuffling and limiting and after filtering.
-
-    #     Args:
-    #         index (list[dict]): list, containing dict for each element of
-    #             the dataset. The dict has required metadata information,
-    #             such as label and object path.
-    #     Returns:
-    #         index (list[dict]): sorted list, containing dict for each element
-    #             of the dataset. The dict has required metadata information,
-    #             such as label and object path.
-    #     """
-    #     return sorted(index, key=lambda x: x["KEY_FOR_SORTING"])
 
     @staticmethod
     def _shuffle_and_limit_index(index, limit, shuffle_index):
