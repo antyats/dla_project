@@ -22,13 +22,6 @@ def collate_fn(dataset_items: list[dict]):
     batch["mix_audio_len"] = torch.tensor(
         [item["mix_audio_len"] for item in dataset_items]
     )
-    batch["mix_spectrogram"] = pad_sequence(
-        [item["mix_spectrogram"].squeeze(0).transpose(0, 1) for item in dataset_items],
-        batch_first=True,
-    ).transpose(1, 2)
-    batch["mix_spectrogram_len"] = torch.tensor(
-        [item["mix_spectrogram_len"] for item in dataset_items]
-    )
 
     batch["video1"] = pad_sequence(
         [item["video1"] for item in dataset_items], batch_first=True
@@ -40,6 +33,18 @@ def collate_fn(dataset_items: list[dict]):
     )
     batch["video2_len"] = torch.tensor([item["video2_len"] for item in dataset_items])
 
+    if "mix_spectrogram" in dataset_items[0]:
+        batch["mix_spectrogram"] = pad_sequence(
+            [
+                item["mix_spectrogram"].squeeze(0).transpose(0, 1)
+                for item in dataset_items
+            ],
+            batch_first=True,
+        ).transpose(1, 2)
+        batch["mix_spectrogram_len"] = torch.tensor(
+            [item["mix_spectrogram_len"] for item in dataset_items]
+        )
+
     if ("speaker1_audio" in dataset_items[0]) and (
         "speaker2_audio" in dataset_items[0]
     ):
@@ -50,6 +55,18 @@ def collate_fn(dataset_items: list[dict]):
         batch["speaker1_audio_len"] = torch.tensor(
             [item["speaker1_audio_len"] for item in dataset_items]
         )
+
+        batch["speaker2_audio"] = pad_sequence(
+            [item["speaker2_audio"].squeeze(0) for item in dataset_items],
+            batch_first=True,
+        )
+        batch["speaker2_audio_len"] = torch.tensor(
+            [item["speaker2_audio_len"] for item in dataset_items]
+        )
+
+    if ("speaker1_spectrogram" in dataset_items[0]) and (
+        "speaker2_spectrogram" in dataset_items[0]
+    ):
         batch["speaker1_spectrogram"] = pad_sequence(
             [
                 item["speaker1_spectrogram"].squeeze(0).transpose(0, 1)
@@ -61,13 +78,6 @@ def collate_fn(dataset_items: list[dict]):
             [item["speaker1_spectrogram_len"] for item in dataset_items]
         )
 
-        batch["speaker2_audio"] = pad_sequence(
-            [item["speaker2_audio"].squeeze(0) for item in dataset_items],
-            batch_first=True,
-        )
-        batch["speaker2_audio_len"] = torch.tensor(
-            [item["speaker2_audio_len"] for item in dataset_items]
-        )
         batch["speaker2_spectrogram"] = pad_sequence(
             [
                 item["speaker2_spectrogram"].squeeze(0).transpose(0, 1)
