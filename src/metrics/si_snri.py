@@ -22,7 +22,11 @@ class SI_SNRi(BaseMetric):
         self.reduction = reduction
 
     def __call__(
-        self, input: torch.Tensor, output: torch.Tensor, target: torch.Tensor, **kwargs
+        self,
+        mix_audio: torch.Tensor,
+        output_audio: torch.Tensor,
+        target_audio: torch.Tensor,
+        **kwargs
     ) -> torch.Tensor:
         """
         SI-SNR calculation logic.
@@ -34,8 +38,8 @@ class SI_SNRi(BaseMetric):
         Returns:
             metric (Tensor): calculated SI-SNR.
         """
-        sisnr_input = scale_invariant_signal_noise_ratio(input, target)
-        sisnr_output = scale_invariant_signal_noise_ratio(output, target)
+        sisnr_input = scale_invariant_signal_noise_ratio(mix_audio, target_audio)
+        sisnr_output = scale_invariant_signal_noise_ratio(output_audio, target_audio)
         result = sisnr_output - sisnr_input
 
         if self.reduction == "mean":
