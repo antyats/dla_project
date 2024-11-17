@@ -27,6 +27,9 @@ class BaseTrainer:
         dataloaders,
         logger,
         writer,
+        compile_model=False,
+        n_grad_accum_steps=None,
+        amp_float_type=None,
         epoch_len=None,
         skip_oom=True,
         batch_transforms=None,
@@ -66,7 +69,16 @@ class BaseTrainer:
         self.logger = logger
         self.log_step = config.trainer.get("log_step", 50)
 
+        # mixed precision training
+        self.amp_float_type = amp_float_type
+
+        self.n_grad_accum_steps = (
+            1 if n_grad_accum_steps is None else n_grad_accum_steps
+        )
+
         self.model = model
+        if compile_model:
+            self.model = torch.compile(self.model, backend="cudagraphs")
         self.criterion = criterion
         self.optimizer = optimizer
         self.lr_scheduler = lr_scheduler
@@ -208,6 +220,7 @@ class BaseTrainer:
             try:
                 batch = self.process_batch(
                     batch,
+                    batch_idx,
                     metrics=self.train_metrics,
                 )
             except torch.cuda.OutOfMemoryError as e:
@@ -271,6 +284,7 @@ class BaseTrainer:
             ):
                 batch = self.process_batch(
                     batch,
+                    batch_idx,
                     metrics=self.evaluation_metrics,
                 )
             self.writer.set_step(epoch * self.epoch_len, part)

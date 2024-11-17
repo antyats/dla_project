@@ -2,6 +2,7 @@ from typing import Optional, TypeVar
 
 import torch
 from torch import Tensor, nn
+from torch.utils.checkpoint import checkpoint
 
 from src.model.ctc_layers import AuditoryModule, ConvBlock, FusionModule, VisualModule
 
@@ -30,6 +31,7 @@ class CTCNet(nn.Module):
         fusion_steps: int = 3,
         audio_only_steps: int = 5,
         activation: TModule = nn.ReLU,
+        use_grad_checkpointing: bool = False,
     ):
         """
         Initializes the CTCNet.
@@ -51,6 +53,7 @@ class CTCNet(nn.Module):
         self.fusion_steps = fusion_steps
         self.audio_only_steps = audio_only_steps
         self.in_video_features = in_video_features
+        self.use_grad_checkpointing = use_grad_checkpointing
 
         self.video_feature_extractor = video_feature_extractor
 
@@ -58,6 +61,8 @@ class CTCNet(nn.Module):
             self.video_feature_extractor.load_state_dict(
                 torch.load(path_to_pretrained_video_extractor)["model_state_dict"]
             )
+        for param in self.video_feature_extractor.parameters():
+            param.requires_grad = False
 
         self.video_downsample = ConvBlock(
             in_channels=in_video_features,
@@ -91,14 +96,15 @@ class CTCNet(nn.Module):
             in_channels=1,
             out_channels=n_audio_channels,
             kernel_size=21,
-            padding=10,
+            stride=10,
             activation=activation,
         )
         self.inv_fb = nn.ConvTranspose1d(
             in_channels=n_audio_channels,
             out_channels=1,
+            stride=10,
             kernel_size=21,
-            padding=10,
+            output_padding=9,
         )
 
         self.linear_head = nn.Sequential(
@@ -106,29 +112,50 @@ class CTCNet(nn.Module):
             activation(),
         )
 
-    def forward(self, audio: Tensor, video: Tensor, **batch) -> dict:
+    def forward(self, mix_audio: Tensor, video: Tensor, **batch) -> dict:
         """
         Args:
             audio (torch.Tensor): input audio. Shape: (batch_size, 1, audio_len)
             video (torch.Tensor): input video. Shape: (batch_size, 1, video_len, h, w)
         Returns:
-            output_audio (torch.Tensor): output audio. Shape: (batch_size, audio_len)
+            output_audio (torch.Tensor): output audio. Shape: (batch_size, 1, audio_len)
         """
-        audio = self.fb(audio)
-        video = self.video_feature_extractor(video, lengths=None).transpose(1, 2)
+        audio = self.fb(mix_audio)
+        with torch.no_grad():  # video_feature_extractor is fixed
+            video = self.video_feature_extractor(video, lengths=None).transpose(1, 2)
         video = self.video_downsample(video)
 
+        residual_audio, residual_video = audio, video
+
         for _ in range(self.fusion_steps):
-            audio = self.audio_module(audio)
-            video = self.visual_module(video)
-            audio, video = self.fusion_module(audio, video)
+            audio = (
+                self.audio_module(residual_audio + audio)
+                if not self.use_grad_checkpointing
+                else checkpoint(self.audio_module, residual_audio + audio)
+            )
+            video = (
+                self.visual_module(residual_video + video)
+                if not self.use_grad_checkpointing
+                else checkpoint(self.visual_module, residual_video + video)
+            )
+            audio, video = (
+                self.fusion_module(residual_audio + audio, residual_video + video)
+                if not self.use_grad_checkpointing
+                else checkpoint(
+                    self.fusion_module, residual_audio + audio, residual_video + video
+                )
+            )
 
         for _ in range(self.audio_only_steps):
-            audio = self.audio_module(audio)
+            audio = (
+                self.audio_module(residual_audio + audio)
+                if not self.use_grad_checkpointing
+                else checkpoint(self.audio_module, residual_audio + audio)
+            )
 
         mask = self.linear_head(audio.transpose(-1, -2)).transpose(-1, -2)
 
-        audio = self.inv_fb(audio * mask).squeeze(1)
+        audio = self.inv_fb(residual_audio * mask)
         return {"output_audio": audio}
 
     def __str__(self):
