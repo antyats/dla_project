@@ -4,6 +4,7 @@ import torch
 from torch import Tensor, nn
 
 from src.model.ctc_layers.conv_block import ConvBlock
+from src.model.ctc_layers.global_layer_norm import GlobalLayerNorm
 
 TModule = TypeVar("TModule", bound=nn.Module)
 

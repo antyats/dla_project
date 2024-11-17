@@ -3,6 +3,7 @@ from typing import TypeVar
 from torch import Tensor, nn
 
 from src.model.ctc_layers.frcnn import FRCNNBlock
+from src.model.ctc_layers.global_layer_norm import GlobalLayerNorm
 
 TModule = TypeVar("TModule", bound=nn.Module)
 
