@@ -1,0 +1,23 @@
+device: "auto"
+train: # metrics that are calculated during training
+    - _target_: src.metrics.SI_SNRi
+      reduction: "mean"
+      name: "SI-SNRi" # just an example to see difference
+inference: # metrics that are calculated during inference (eval)
+    - _target_: src.metrics.PESQ
+      sample_rate: 16000
+      reduction: "mean"
+      mode: "wb"
+      name: "PESQ"
+      n_processes: 1
+      keep_same_device: False
+    - _target_: src.metrics.STOI
+      sample_rate: 16000
+      reduction: "mean"
+      name: "STOI"
+    - _target_: src.metrics.SDRi
+      reduction: "mean"
+      name: "SDRi"
+    - _target_: src.metrics.SI_SNRi
+      reduction: "mean"
+      name: "SI-SNRi"

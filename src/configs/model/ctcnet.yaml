@@ -1,0 +1,23 @@
+_target_: src.model.CTCNet
+video_feature_extractor:
+    _target_: src.model.lipreading.Lipreading
+    backbone_type: "resnet"
+    relu_type: "swish"
+    tcn_options: { "dropout": 0.2, "dwpw": False, "kernel_size": [3, 5, 7], "num_layers": 4, "width_mult": 1 }
+    width_mult: 1.0
+    extract_feats: True
+in_video_features: 512
+path_to_pretrained_video_extractor: "/mnt/d/hse/DLA/dla_project/lrw_resnet18_mstcn_video.pth"
+n_audio_channels: 512
+n_video_channels: 512
+thalamic_channels: 576
+audio_stage_n: 7
+video_stage_n: 5
+audio_kernel_size: 5
+video_kernel_size: 3
+fusion_steps: 3
+audio_only_steps: 5
+activation:
+    _target_: hydra.utils.get_class
+    path: torch.nn.PReLU
+use_grad_checkpointing: True
