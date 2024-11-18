@@ -8,25 +8,24 @@ defaults:
     - _self_
 optimizer:
     _target_: torch.optim.AdamW
-    lr: 1e-5
-    weight_decay: 1e-1
+    lr: 1e-3
+    weight_decay: 1e-4
     maximize: True
 lr_scheduler:
     _target_: torch.optim.lr_scheduler.ReduceLROnPlateau
     mode: max
     factor: 0.5
-    patience: 200
-    verbose: True
+    patience: 5
 loss_function:
-    _target_: src.loss.SingleSrcSDR
+    _target_: src.loss.SI_SNR
 trainer:
-    log_step: 8
+    log_step: 250
     n_epochs: 100
-    epoch_len: 500
-    n_grad_accum_steps: 8
+    # epoch_len: 500
+    n_grad_accum_steps: 1
     device_tensors: ["mix_audio", "video", "target_audio"] # which tensors should be on device (ex. GPU)
     resume_from: null # null or path to the checkpoint dir with *.pth and config.yaml
-    from_pretrained: "/mnt/d/hse/DLA/dla_project/saved/continue learning on custom loss, lr=1e-4, fix loss/checkpoint-epoch2.pth"
+    # from_pretrained: "/mnt/d/hse/DLA/dla_project/saved/try training with global layer norm fix/model_best.pth"
     device: auto # device name or "auto"
     override: False # if True, will override the previous run with the same name
     monitor: "max val_SI-SNRi" # "off" or "max/min metric_name", i.e. our goal is to maximize/minimize metric
@@ -38,5 +37,6 @@ trainer:
         _target_: torch.__dict__.get
         _args_:
             - bfloat16
-    compile_model: False
+    compile_model: True
     max_grad_norm: 5
+    lr_scheduler_mode: "epoch"

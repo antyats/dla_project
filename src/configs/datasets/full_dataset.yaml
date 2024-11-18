@@ -7,5 +7,5 @@ val:
     _target_: src.datasets.DLADataset
     data_dir: "/mnt/d/hse/DLA/dla_dataset"
     part: "val"
-    limit: 500
+    # limit: 500
     instance_transforms: ${transforms.instance_transforms.inference}

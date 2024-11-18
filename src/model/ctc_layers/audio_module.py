@@ -22,7 +22,7 @@ class AuditoryModule(nn.Module):
             conv_dim=conv_dim,
             kernel_size=kernel_size,
             activation=activation,
-            norm=nn.InstanceNorm1d,
+            norm=GlobalLayerNorm,
         )
 
     def forward(self, audio: Tensor) -> Tensor:

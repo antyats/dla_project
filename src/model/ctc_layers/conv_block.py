@@ -16,7 +16,8 @@ class ConvBlock(nn.Module):
         stride: int = 1,
         padding: int = 0,
         activation: TModule = nn.ReLU,
-        norm: TModule = nn.InstanceNorm1d,
+        norm: TModule = GlobalLayerNorm,
+        groups: int = 1,
     ):
         super().__init__()
         self.conv = nn.Conv1d(
@@ -25,6 +26,7 @@ class ConvBlock(nn.Module):
             kernel_size=kernel_size,
             stride=stride,
             padding=padding,
+            groups=groups,
         )
         self.act = activation()
         self.norm = norm(out_channels)

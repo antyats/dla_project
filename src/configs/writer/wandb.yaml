@@ -1,7 +1,7 @@
 _target_: src.logger.WandBWriter
 project_name: "dla_avss_project_test"
 entity: null
-run_name: "continue learning on custom loss, lr=1e-5 fix"
+run_name: "make convs depthwise, remove act, bs=10, 5 stages"
 mode: "online"
 loss_names: ["loss"] # which losses to log (useful for multi-loss tasks, s.a. GANs)
 log_checkpoints: False # set to True if you want to log save_dir with checkpoints to W&B

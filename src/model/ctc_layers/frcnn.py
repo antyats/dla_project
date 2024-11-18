@@ -22,7 +22,7 @@ class FRCNNBlock(nn.Module):
         kernel_size=5,
         conv_dim: int = 512,
         activation: TModule = nn.ReLU,
-        norm: TModule = nn.InstanceNorm1d,
+        norm: TModule = GlobalLayerNorm,
     ):
         """
         Args:
@@ -44,7 +44,8 @@ class FRCNNBlock(nn.Module):
                     kernel_size=self.kernel_size,
                     stride=2,
                     padding=padding_n,
-                    activation=activation,
+                    groups=self.conv_dim,
+                    activation=nn.Identity,
                     norm=norm,
                 )
                 for _ in range(stage_num - 1)
@@ -58,7 +59,8 @@ class FRCNNBlock(nn.Module):
                     kernel_size=self.kernel_size,
                     stride=2,
                     padding=padding_n,
-                    activation=activation,
+                    groups=self.conv_dim,
+                    activation=nn.Identity,
                     norm=norm,
                 )
                 for _ in range(stage_num - 1)

@@ -16,7 +16,7 @@ video_stage_n: 5
 audio_kernel_size: 5
 video_kernel_size: 3
 fusion_steps: 3
-audio_only_steps: 5
+audio_only_steps: 1
 activation:
     _target_: hydra.utils.get_class
     path: torch.nn.PReLU

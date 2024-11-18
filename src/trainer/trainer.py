@@ -53,7 +53,8 @@ class Trainer(BaseTrainer):
             self._clip_grad_norm()
             if batch_idx % self.n_grad_accum_steps == 0:
                 self.optimizer.step()
-                if self.lr_scheduler is not None:
+                # self.optimizer.zero_grad()
+                if self.lr_scheduler_mode == "step" and self.lr_scheduler is not None:
                     if (
                         type(self.lr_scheduler)
                         == torch.optim.lr_scheduler.ReduceLROnPlateau
@@ -88,9 +89,8 @@ class Trainer(BaseTrainer):
         # logging scheme might be different for different partitions
         if mode == "train":  # the method is called only every self.log_step steps
             # Log Stuff
-            # self.log_spectrogram(**batch)
-            # self.log_audio(**batch)
-            pass
+            self.log_spectrogram(**batch)
+            self.log_audio(**batch)
         else:
             # Log Stuff
             self.log_spectrogram(**batch)
@@ -106,7 +106,7 @@ class Trainer(BaseTrainer):
         self.writer.add_image("target_spectrogram_1", image)
 
         spectrogram_for_plot = (
-            target_spectrogram[self.config.dataloader.batch_size].detach().cpu()
+            target_spectrogram[target_spectrogram.shape[0] // 2].detach().cpu()
         )
         image = plot_spectrogram(spectrogram_for_plot)
         self.writer.add_image("target_spectrogram_2", image)
@@ -128,7 +128,7 @@ class Trainer(BaseTrainer):
             sample_rate=self.config.writer.audio_sample_rate,
         )
 
-        audio = _normalize_audio(target_audio[self.config.dataloader.batch_size])
+        audio = _normalize_audio(target_audio[target_audio.shape[0] // 2])
         self.writer.add_audio(
             "target_audio_2",
             audio.float(),
@@ -142,7 +142,7 @@ class Trainer(BaseTrainer):
             sample_rate=self.config.writer.audio_sample_rate,
         )
 
-        audio = _normalize_audio(output_audio[self.config.dataloader.batch_size])
+        audio = _normalize_audio(output_audio[output_audio.shape[0] // 2])
         self.writer.add_audio(
             "output_audio_2",
             audio.float(),

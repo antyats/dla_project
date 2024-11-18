@@ -78,11 +78,17 @@ class BaseTrainer:
 
         self.model = model
         if compile_model:
-            self.model = torch.compile(self.model, backend="cudagraphs")
+            self.model = torch.compile(self.model)
         self.criterion = criterion
         self.optimizer = optimizer
         self.lr_scheduler = lr_scheduler
         self.batch_transforms = batch_transforms
+
+        self.lr_scheduler_mode = self.cfg_trainer.get("lr_scheduler_mode", "step")
+        assert self.lr_scheduler_mode in ["step", "epoch"], (
+            f"Invalid lr_scheduler_mode: {self.lr_scheduler_mode}. "
+            'Allowed values: ["step", "epoch"]'
+        )
 
         # define dataloaders
         self.train_dataloader = dataloaders["train"]
@@ -241,9 +247,15 @@ class BaseTrainer:
                         epoch, self._progress(batch_idx), batch["loss"].item()
                     )
                 )
-                self.writer.add_scalar(
-                    "learning rate", self.lr_scheduler.get_last_lr()[0]
-                )
+
+                # if lr scheduler is updated once per epoch,
+                # lr_scheduler may not have last_lr
+                try:
+                    lr = self.lr_scheduler.get_last_lr()[0]
+                except AttributeError:
+                    lr = self.config.optimizer.lr
+
+                self.writer.add_scalar("learning rate", lr)
                 self._log_scalars(self.train_metrics)
                 self._log_batch(batch_idx, batch)
                 # we don't want to reset train metrics at the start of every epoch
@@ -259,6 +271,12 @@ class BaseTrainer:
         for part, dataloader in self.evaluation_dataloaders.items():
             val_logs = self._evaluation_epoch(epoch, part, dataloader)
             logs.update(**{f"{part}_{name}": value for name, value in val_logs.items()})
+
+        if self.lr_scheduler_mode == "epoch" and self.lr_scheduler is not None:
+            if type(self.lr_scheduler) == torch.optim.lr_scheduler.ReduceLROnPlateau:
+                self.lr_scheduler.step(metrics=logs["val_loss"])
+            else:
+                self.lr_scheduler.step()
 
         return logs
 
