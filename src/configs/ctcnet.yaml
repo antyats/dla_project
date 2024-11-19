@@ -9,7 +9,7 @@ defaults:
 optimizer:
     _target_: torch.optim.AdamW
     lr: 1e-3
-    weight_decay: 1e-4
+    weight_decay: 1e-1
     maximize: True
 lr_scheduler:
     _target_: torch.optim.lr_scheduler.ReduceLROnPlateau
@@ -24,9 +24,9 @@ trainer:
     # epoch_len: 500
     n_grad_accum_steps: 1
     device_tensors: ["mix_audio", "video", "target_audio"] # which tensors should be on device (ex. GPU)
-    resume_from: null # null or path to the checkpoint dir with *.pth and config.yaml
-    # from_pretrained: "/mnt/d/hse/DLA/dla_project/saved/try training with global layer norm fix/model_best.pth"
-    device: auto # device name or "auto"
+    # resume_from: "/home/admin/dla_project/saved/weight_decay=1e-1, bs=10, train for night/" # null or path to the checkpoint dir with *.pth and config.yaml
+    # from_pretrained: "/home/admin/dla_project/saved/weight_decay=1e-1, bs=10, train for night/checkpoint-epoch1.pth"
+    device: cuda # device name or "auto"
     override: False # if True, will override the previous run with the same name
     monitor: "max val_SI-SNRi" # "off" or "max/min metric_name", i.e. our goal is to maximize/minimize metric
     save_period: 5 # checkpoint each save_period epochs in addition to the best epoch

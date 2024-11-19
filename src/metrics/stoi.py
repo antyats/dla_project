@@ -1,6 +1,6 @@
 import torch
 from torchmetrics.functional.audio.stoi import short_time_objective_intelligibility
-
+from typing import Optional
 from src.metrics.base_metric import BaseMetric
 
 
@@ -8,7 +8,7 @@ class STOI(BaseMetric):
     def __init__(
         self,
         sample_rate: int,
-        name: str | None = None,
+        name: Optional[str] = None,
         reduction: str = "mean",
         keep_same_device: bool = False,
         *args,

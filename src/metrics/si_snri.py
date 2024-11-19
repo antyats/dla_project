@@ -1,12 +1,12 @@
 import torch
 from torchmetrics.functional import scale_invariant_signal_noise_ratio
-
+from typing import Optional
 from src.metrics.base_metric import BaseMetric
 
 
 class SI_SNRi(BaseMetric):
     def __init__(
-        self, name: str | None = None, reduction: str = "mean", *args, **kwargs
+        self, name: Optional[str] = None, reduction: str = "mean", *args, **kwargs
     ) -> None:
         """
         SI-SNR metric class.

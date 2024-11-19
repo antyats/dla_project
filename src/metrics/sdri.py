@@ -1,12 +1,12 @@
 import torch
 from torchmetrics.functional import signal_distortion_ratio
-
+from typing import Optional
 from src.metrics.base_metric import BaseMetric
 
 
 class SDRi(BaseMetric):
     def __init__(
-        self, name: str | None = None, reduction: str = "mean", *args, **kwargs
+        self, name: Optional[str] = None, reduction: str = "mean", *args, **kwargs
     ) -> None:
         """
         SDRi metric class.

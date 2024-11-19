@@ -7,7 +7,7 @@ video_feature_extractor:
     width_mult: 1.0
     extract_feats: True
 in_video_features: 512
-path_to_pretrained_video_extractor: "/mnt/d/hse/DLA/dla_project/lrw_resnet18_mstcn_video.pth"
+path_to_pretrained_video_extractor: "/home/admin/dla_project/lrw_resnet18_mstcn_video.pth"
 n_audio_channels: 512
 n_video_channels: 64
 thalamic_channels: 576
@@ -16,7 +16,7 @@ video_stage_n: 5
 audio_kernel_size: 5
 video_kernel_size: 3
 fusion_steps: 3
-audio_only_steps: 1
+audio_only_steps: 3
 activation:
     _target_: hydra.utils.get_class
     path: torch.nn.PReLU

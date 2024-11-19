@@ -1,4 +1,5 @@
 import torch
+from typing import Optional
 from torchmetrics.functional.audio.pesq import perceptual_evaluation_speech_quality
 
 from src.metrics.base_metric import BaseMetric
@@ -8,7 +9,7 @@ class PESQ(BaseMetric):
     def __init__(
         self,
         sample_rate: int,
-        name: str | None = None,
+        name: Optional[str] = None,
         reduction: str = "mean",
         mode: str = "wb",
         keep_same_device: bool = False,
