@@ -1,12 +1,12 @@
 import torch
 from torchmetrics.functional import signal_distortion_ratio
-
+from typing import Optional
 from src.metrics.base_metric import BaseMetric
 
 
 class SDRi(BaseMetric):
     def __init__(
-        self, name: str | None = None, reduction: str = "mean", *args, **kwargs
+        self, name: Optional[str] = None, reduction: str = "mean", *args, **kwargs
     ) -> None:
         """
         SDRi metric class.
@@ -22,7 +22,11 @@ class SDRi(BaseMetric):
         self.reduction = reduction
 
     def __call__(
-        self, input: torch.Tensor, output: torch.Tensor, target: torch.Tensor, **kwargs
+        self,
+        mix_audio: torch.Tensor,
+        output_audio: torch.Tensor,
+        target_audio: torch.Tensor,
+        **kwargs
     ) -> torch.Tensor:
         """
         SDRi calculation logic.
@@ -34,8 +38,8 @@ class SDRi(BaseMetric):
         Returns:
             metric (Tensor): calculated SDRi.
         """
-        sdr_input = signal_distortion_ratio(input, target)
-        sdr_output = signal_distortion_ratio(output, target)
+        sdr_input = signal_distortion_ratio(mix_audio.float(), target_audio.float())
+        sdr_output = signal_distortion_ratio(output_audio.float(), target_audio.float())
         result = sdr_output - sdr_input
 
         if self.reduction == "mean":

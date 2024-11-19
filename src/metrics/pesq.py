@@ -1,4 +1,5 @@
 import torch
+from typing import Optional
 from torchmetrics.functional.audio.pesq import perceptual_evaluation_speech_quality
 
 from src.metrics.base_metric import BaseMetric
@@ -8,7 +9,7 @@ class PESQ(BaseMetric):
     def __init__(
         self,
         sample_rate: int,
-        name: str | None = None,
+        name: Optional[str] = None,
         reduction: str = "mean",
         mode: str = "wb",
         keep_same_device: bool = False,
@@ -38,7 +39,7 @@ class PESQ(BaseMetric):
         self.n_processes = n_processes
 
     def __call__(
-        self, output: torch.Tensor, target: torch.Tensor, **kwargs
+        self, output_audio: torch.Tensor, target_audio: torch.Tensor, **kwargs
     ) -> torch.Tensor:
         """
         PESQ calculation logic.
@@ -50,8 +51,8 @@ class PESQ(BaseMetric):
             metric (Tensor): calculated SDRi.
         """
         pesq = perceptual_evaluation_speech_quality(
-            output,
-            target,
+            output_audio.float(),
+            target_audio.float(),
             fs=self.sample_rate,
             mode=self.mode,
             keep_same_device=self.keep_same_device,

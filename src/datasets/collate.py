@@ -1,4 +1,5 @@
 import torch
+from torch.nn.utils.rnn import pad_sequence
 
 
 def collate_fn(dataset_items: list[dict]):
@@ -14,12 +15,64 @@ def collate_fn(dataset_items: list[dict]):
             of the tensors.
     """
 
-    result_batch = {}
+    batch = {}
+    batch["mix_audio"] = pad_sequence(
+        [item["mix_audio"] for item in dataset_items], batch_first=True
+    ).repeat(2, 1, 1)
 
-    # example of collate_fn
-    result_batch["data_object"] = torch.vstack(
-        [elem["data_object"] for elem in dataset_items]
+    batch["mix_audio_len"] = torch.tensor(
+        [item["mix_audio_len"] for item in dataset_items]
+    ).repeat(2, 1, 1)
+    batch["mix_spectrogram"] = (
+        pad_sequence(
+            [
+                item["mix_spectrogram"].squeeze(0).transpose(0, 1)
+                for item in dataset_items
+            ],
+            batch_first=True,
+        )
+        .transpose(1, 2)
+        .repeat(2, 1, 1)
     )
-    result_batch["labels"] = torch.tensor([elem["labels"] for elem in dataset_items])
+    batch["mix_spectrogram_len"] = torch.tensor(
+        [item["mix_spectrogram_len"] for item in dataset_items]
+    ).repeat(2, 1, 1)
 
-    return result_batch
+    batch["video"] = pad_sequence(
+        [item["video1"] for item in dataset_items]
+        + [item["video2"] for item in dataset_items],
+        batch_first=True,
+    ).unsqueeze(1)
+    batch["video_len"] = torch.tensor(
+        [item["video1_len"] for item in dataset_items]
+        + [item["video2_len"] for item in dataset_items]
+    )
+    if ("speaker1_audio" in dataset_items[0]) and (
+        "speaker2_audio" in dataset_items[0]
+    ):
+        batch["target_audio"] = pad_sequence(
+            [item["speaker1_audio"] for item in dataset_items]
+            + [item["speaker2_audio"] for item in dataset_items],
+            batch_first=True,
+        )
+        batch["target_audio_len"] = torch.tensor(
+            [item["speaker1_audio_len"] for item in dataset_items]
+            + [item["speaker2_audio_len"] for item in dataset_items]
+        )
+        batch["target_spectrogram"] = pad_sequence(
+            [
+                item["speaker1_spectrogram"].squeeze(0).transpose(0, 1)
+                for item in dataset_items
+            ]
+            + [
+                item["speaker2_spectrogram"].squeeze(0).transpose(0, 1)
+                for item in dataset_items
+            ],
+            batch_first=True,
+        ).transpose(1, 2)
+        batch["target_spectrogram_len"] = torch.tensor(
+            [item["speaker1_spectrogram_len"] for item in dataset_items]
+            + [item["speaker2_spectrogram_len"] for item in dataset_items]
+        )
+
+    return batch

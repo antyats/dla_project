@@ -1,3 +1,4 @@
+import os
 import warnings
 
 import hydra
@@ -10,6 +11,9 @@ from src.trainer import Trainer
 from src.utils.init_utils import set_random_seed, setup_saving_and_logging
 
 warnings.filterwarnings("ignore", category=UserWarning)
+
+
+os.environ["HYDRA_FULL_ERROR"] = "1"
 
 
 @hydra.main(version_base=None, config_path="src/configs", config_name="baseline")
@@ -38,7 +42,7 @@ def main(config):
     dataloaders, batch_transforms = get_dataloaders(config, device)
 
     # build model architecture, then print to console
-    model = instantiate(config.model).to(device)
+    model = instantiate(config.model, _convert_="partial").to(device)
     logger.info(model)
 
     # get function handles of loss and metrics
@@ -68,6 +72,9 @@ def main(config):
         writer=writer,
         batch_transforms=batch_transforms,
         skip_oom=config.trainer.get("skip_oom", True),
+        compile_model=config.trainer.get("compile_model", False),
+        amp_float_type=instantiate(config.trainer.get("amp_float_type", None)),
+        n_grad_accum_steps=config.trainer.get("n_grad_accum_steps", None),
     )
 
     trainer.train()

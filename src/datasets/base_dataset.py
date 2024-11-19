@@ -2,7 +2,9 @@ import logging
 import random
 from typing import List
 
+import numpy as np
 import torch
+import torchaudio
 from torch.utils.data import Dataset
 
 logger = logging.getLogger(__name__)
@@ -18,7 +20,12 @@ class BaseDataset(Dataset):
     """
 
     def __init__(
-        self, index, limit=None, shuffle_index=False, instance_transforms=None
+        self,
+        index,
+        target_sr=16000,
+        limit=None,
+        shuffle_index=False,
+        instance_transforms=None,
     ):
         """
         Args:
@@ -38,6 +45,8 @@ class BaseDataset(Dataset):
         index = self._shuffle_and_limit_index(index, limit, shuffle_index)
         self._index: List[dict] = index
 
+        self.target_sr = target_sr
+
         self.instance_transforms = instance_transforms
 
     def __getitem__(self, ind):
@@ -56,12 +65,62 @@ class BaseDataset(Dataset):
                 (a single dataset element).
         """
         data_dict = self._index[ind]
-        data_path = data_dict["path"]
-        data_object = self.load_object(data_path)
-        data_label = data_dict["label"]
 
-        instance_data = {"data_object": data_object, "labels": data_label}
-        instance_data = self.preprocess_data(instance_data)
+        mix_audio_path = data_dict["mix_audio_path"]
+        speaker1_audio_path = data_dict["speaker1_audio_path"]
+        speaker2_audio_path = data_dict["speaker2_audio_path"]
+        speaker1_video_path = data_dict["speaker1_video_path"]
+        speaker2_video_path = data_dict["speaker2_video_path"]
+
+        mix_audio = self.load_audio(mix_audio_path)
+        speaker1_video = self.load_video(speaker1_video_path)
+        speaker2_video = self.load_video(speaker2_video_path)
+
+        mix_audio = self.wave_augmentation(mix_audio)
+        mix_spectrogram = self.get_spectrogram(mix_audio)
+        mix_spectrogram = self.spectrogram_augmentation(mix_spectrogram)
+
+        speaker1_video = self.video_augmentation(speaker1_video)
+        speaker2_video = self.video_augmentation(speaker2_video)
+
+        instance_data = {
+            "mix_audio": mix_audio,
+            "mix_audio_len": mix_audio.size(-1),
+            "mix_spectrogram": mix_spectrogram,
+            "mix_spectrogram_len": (
+                mix_spectrogram.size(-1) if mix_spectrogram is not None else None
+            ),
+            "video1": speaker1_video,
+            "video1_len": speaker1_video.size(0),
+            "video2": speaker2_video,
+            "video2_len": speaker2_video.size(0),
+        }
+        if (speaker1_audio_path and speaker1_audio_path) is not None:
+            speaker1_audio = self.load_audio(speaker1_audio_path)
+            speaker2_audio = self.load_audio(speaker2_audio_path)
+            speaker1_spectrogram = self.get_spectrogram(speaker1_audio)
+            speaker2_spectrogram = self.get_spectrogram(speaker2_audio)
+
+            instance_data.update(
+                {
+                    "speaker1_audio": speaker1_audio,
+                    "speaker1_audio_len": speaker1_audio.size(-1),
+                    "speaker1_spectrogram": speaker1_spectrogram,
+                    "speaker1_spectrogram_len": (
+                        speaker1_spectrogram.size(-1)
+                        if speaker1_spectrogram is not None
+                        else None
+                    ),
+                    "speaker2_audio": speaker2_audio,
+                    "speaker2_audio_len": speaker2_audio.size(-1),
+                    "speaker2_spectrogram": speaker2_spectrogram,
+                    "speaker2_spectrogram_len": (
+                        speaker2_spectrogram.size(-1)
+                        if speaker2_spectrogram is not None
+                        else None
+                    ),
+                }
+            )
 
         return instance_data
 
@@ -71,61 +130,53 @@ class BaseDataset(Dataset):
         """
         return len(self._index)
 
-    def load_object(self, path):
+    def load_audio(self, path):
         """
-        Load object from disk.
+        Load audio from disk.
 
         Args:
-            path (str): path to the object.
+            path(str): path to the audio (wav/flac/mp3).
         Returns:
-            data_object (Tensor):
+            Audio tensor.
         """
-        data_object = torch.load(path)
-        return data_object
+        audio_tensor, sr = torchaudio.load(path)
+        audio_tensor = audio_tensor[0:1, :]  # remove all channels but the first
+        target_sr = self.target_sr
+        if sr != target_sr:
+            audio_tensor = torchaudio.functional.resample(audio_tensor, sr, target_sr)
+        return audio_tensor
 
-    def preprocess_data(self, instance_data):
-        """
-        Preprocess data with instance transforms.
+    def load_video(self, path):
+        video = np.load(path)
+        video_tensor = torch.from_numpy(video["data"])
+        return video_tensor / 255
 
-        Each tensor in a dict undergoes its own transform defined by the key.
+    def get_spectrogram(self, audio):
+        if self.instance_transforms is not None:
+            if "get_spectrogram" in self.instance_transforms:
+                return self.instance_transforms["get_spectrogram"](audio)
+        return None
 
-        Args:
-            instance_data (dict): dict, containing instance
-                (a single dataset element).
-        Returns:
-            instance_data (dict): dict, containing instance
-                (a single dataset element) (possibly transformed via
-                instance transform).
-        """
+    def wave_augmentation(self, audio):
         if self.instance_transforms is not None:
             for transform_name in self.instance_transforms.keys():
-                instance_data[transform_name] = self.instance_transforms[
-                    transform_name
-                ](instance_data[transform_name])
-        return instance_data
+                if transform_name == "audio":
+                    audio = self.instance_transforms[transform_name](audio)
+        return audio
 
-    @staticmethod
-    def _filter_records_from_dataset(
-        index: list,
-    ) -> list:
-        """
-        Filter some of the elements from the dataset depending on
-        some condition.
+    def spectrogram_augmentation(self, spectrogram):
+        if self.instance_transforms is not None:
+            for transform_name in self.instance_transforms.keys():
+                if transform_name == "spectrogram":
+                    spectrogram = self.instance_transforms[transform_name](spectrogram)
+        return spectrogram
 
-        This is not used in the example. The method should be called in
-        the __init__ before shuffling and limiting.
-
-        Args:
-            index (list[dict]): list, containing dict for each element of
-                the dataset. The dict has required metadata information,
-                such as label and object path.
-        Returns:
-            index (list[dict]): list, containing dict for each element of
-                the dataset that satisfied the condition. The dict has
-                required metadata information, such as label and object path.
-        """
-        # Filter logic
-        pass
+    def video_augmentation(self, video):
+        if self.instance_transforms is not None:
+            for transform_name in self.instance_transforms.keys():
+                if transform_name == "video":
+                    video = self.instance_transforms[transform_name](video)
+        return video
 
     @staticmethod
     def _assert_index_is_valid(index):
@@ -139,32 +190,21 @@ class BaseDataset(Dataset):
                 such as label and object path.
         """
         for entry in index:
-            assert "path" in entry, (
-                "Each dataset item should include field 'path'" " - path to audio file."
-            )
-            assert "label" in entry, (
-                "Each dataset item should include field 'label'"
-                " - object ground-truth label."
-            )
-
-    @staticmethod
-    def _sort_index(index):
-        """
-        Sort index via some rules.
-
-        This is not used in the example. The method should be called in
-        the __init__ before shuffling and limiting and after filtering.
-
-        Args:
-            index (list[dict]): list, containing dict for each element of
-                the dataset. The dict has required metadata information,
-                such as label and object path.
-        Returns:
-            index (list[dict]): sorted list, containing dict for each element
-                of the dataset. The dict has required metadata information,
-                such as label and object path.
-        """
-        return sorted(index, key=lambda x: x["KEY_FOR_SORTING"])
+            assert (
+                "mix_audio_path" in entry
+            ), "Each dataset item should include field 'mix_audio_path' - path to audio file."
+            assert (
+                "speaker1_video_path" in entry
+            ), "Each dataset item should include field 'speaker1_video_path' - path to file, that contains video information for the speaker1."
+            assert (
+                "speaker2_video_path" in entry
+            ), "Each dataset item should include field 'speaker2_video_path' - path to file, that contains video information for the speaker2."
+            assert (
+                "speaker1_audio_path" in entry
+            ), "Each dataset item should include field 'speaker1_audio_path' - None / path to file, that contains ground truth for the speaker1"
+            assert (
+                "speaker2_audio_path" in entry
+            ), "Each dataset item should include field 'speaker2_audio_path' - None / path to file, that contains ground truth for the speaker2"
 
     @staticmethod
     def _shuffle_and_limit_index(index, limit, shuffle_index):

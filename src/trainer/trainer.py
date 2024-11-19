@@ -1,3 +1,7 @@
+import torch
+from torch import amp
+
+from src.logger.utils import plot_spectrogram
 from src.metrics.tracker import MetricTracker
 from src.trainer.base_trainer import BaseTrainer
 
@@ -7,7 +11,7 @@ class Trainer(BaseTrainer):
     Trainer class. Defines the logic of batch logging and processing.
     """
 
-    def process_batch(self, batch, metrics: MetricTracker):
+    def process_batch(self, batch, batch_idx, metrics: MetricTracker):
         """
         Run batch through the model, compute metrics, compute loss,
         and do training step (during training stage).
@@ -33,19 +37,31 @@ class Trainer(BaseTrainer):
         if self.is_train:
             metric_funcs = self.metrics["train"]
             self.optimizer.zero_grad()
+        with amp.autocast(
+            device_type=self.device,
+            dtype=self.amp_float_type,
+            enabled=self.amp_float_type is not None,
+        ):
+            outputs = self.model(**batch)
+            batch.update(outputs)
 
-        outputs = self.model(**batch)
-        batch.update(outputs)
-
-        all_losses = self.criterion(**batch)
-        batch.update(all_losses)
+            all_losses = self.criterion(**batch)
+            batch.update(all_losses)
 
         if self.is_train:
             batch["loss"].backward()  # sum of all losses is always called loss
             self._clip_grad_norm()
-            self.optimizer.step()
-            if self.lr_scheduler is not None:
-                self.lr_scheduler.step()
+            if batch_idx % self.n_grad_accum_steps == 0:
+                self.optimizer.step()
+                # self.optimizer.zero_grad()
+                if self.lr_scheduler_mode == "step" and self.lr_scheduler is not None:
+                    if (
+                        type(self.lr_scheduler)
+                        == torch.optim.lr_scheduler.ReduceLROnPlateau
+                    ):
+                        self.lr_scheduler.step(metrics=batch["loss"].item())
+                    else:
+                        self.lr_scheduler.step()
 
         # update metrics for each loss (in case of multiple losses)
         for loss_name in self.config.writer.loss_names:
@@ -73,7 +89,62 @@ class Trainer(BaseTrainer):
         # logging scheme might be different for different partitions
         if mode == "train":  # the method is called only every self.log_step steps
             # Log Stuff
-            pass
+            self.log_spectrogram(**batch)
+            self.log_audio(**batch)
         else:
             # Log Stuff
-            pass
+            self.log_spectrogram(**batch)
+            self.log_audio(**batch)
+
+    def log_spectrogram(self, mix_spectrogram, target_spectrogram, **batch):
+        spectrogram_for_plot = mix_spectrogram[0].detach().cpu()
+        image = plot_spectrogram(spectrogram_for_plot)
+        self.writer.add_image("mix_spectrogram", image)
+
+        spectrogram_for_plot = target_spectrogram[0].detach().cpu()
+        image = plot_spectrogram(spectrogram_for_plot)
+        self.writer.add_image("target_spectrogram_1", image)
+
+        spectrogram_for_plot = (
+            target_spectrogram[target_spectrogram.shape[0] // 2].detach().cpu()
+        )
+        image = plot_spectrogram(spectrogram_for_plot)
+        self.writer.add_image("target_spectrogram_2", image)
+
+    def log_audio(self, mix_audio, target_audio, output_audio, **batch):
+        def _normalize_audio(audio: torch.Tensor):
+            audio /= torch.max(torch.abs(audio))
+            return audio.detach().cpu()
+
+        audio = _normalize_audio(mix_audio[0])
+        self.writer.add_audio(
+            "mix_audio", audio.float(), sample_rate=self.config.writer.audio_sample_rate
+        )
+
+        audio = _normalize_audio(target_audio[0])
+        self.writer.add_audio(
+            "target_audio_1",
+            audio.float(),
+            sample_rate=self.config.writer.audio_sample_rate,
+        )
+
+        audio = _normalize_audio(target_audio[target_audio.shape[0] // 2])
+        self.writer.add_audio(
+            "target_audio_2",
+            audio.float(),
+            sample_rate=self.config.writer.audio_sample_rate,
+        )
+
+        audio = _normalize_audio(output_audio[0])
+        self.writer.add_audio(
+            "output_audio_1",
+            audio.float(),
+            sample_rate=self.config.writer.audio_sample_rate,
+        )
+
+        audio = _normalize_audio(output_audio[output_audio.shape[0] // 2])
+        self.writer.add_audio(
+            "output_audio_2",
+            audio.float(),
+            sample_rate=self.config.writer.audio_sample_rate,
+        )
