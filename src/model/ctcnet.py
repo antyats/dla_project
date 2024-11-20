@@ -4,13 +4,7 @@ import torch
 from torch import Tensor, nn
 from torch.utils.checkpoint import checkpoint
 
-from src.model.ctc_layers import (
-    AuditoryModule,
-    ConvBlock,
-    FusionModule,
-    TDANet,
-    VisualModule,
-)
+from src.model.ctc_layers import AuditoryModule, ConvBlock, FusionModule, VisualModule
 
 TModule = TypeVar("TModule", bound=nn.Module)
 
@@ -86,7 +80,7 @@ class CTCNet(nn.Module):
             kernel_size=audio_kernel_size,
             activation=activation,
         )
-        self.visual_module = TDANet(
+        self.visual_module = VisualModule(
             stage_num=video_stage_n,
             conv_dim=n_video_channels,
             kernel_size=video_kernel_size,
@@ -119,11 +113,6 @@ class CTCNet(nn.Module):
             activation(),
         )
 
-    def _checkpoint(self, module, *inputs) -> Tensor:
-        if self.use_grad_checkpointing:
-            return checkpoint(module, *inputs)
-        return module(*inputs)
-
     def forward(self, mix_audio: Tensor, video: Tensor, **batch) -> dict:
         """
         Args:
@@ -140,15 +129,30 @@ class CTCNet(nn.Module):
         residual_audio, residual_video = audio, video
 
         for _ in range(self.fusion_steps):
-            audio = self._checkpoint(self.audio_module, residual_audio + audio)
-            video = self._checkpoint(self.visual_module, residual_video + video)
-
-            audio, video = self._checkpoint(
-                self.fusion_module, residual_audio + audio, residual_video + video
+            audio = (
+                self.audio_module(residual_audio + audio)
+                if not self.use_grad_checkpointing
+                else checkpoint(self.audio_module, residual_audio + audio)
+            )
+            video = (
+                self.visual_module(residual_video + video)
+                if not self.use_grad_checkpointing
+                else checkpoint(self.visual_module, residual_video + video)
+            )
+            audio, video = (
+                self.fusion_module(residual_audio + audio, residual_video + video)
+                if not self.use_grad_checkpointing
+                else checkpoint(
+                    self.fusion_module, residual_audio + audio, residual_video + video
+                )
             )
 
         for _ in range(self.audio_only_steps):
-            audio = self._checkpoint(self.audio_module, residual_audio + audio)
+            audio = (
+                self.audio_module(residual_audio + audio)
+                if not self.use_grad_checkpointing
+                else checkpoint(self.audio_module, residual_audio + audio)
+            )
 
         mask = self.linear_head(audio.transpose(-1, -2)).transpose(-1, -2)
 
@@ -169,41 +173,3 @@ class CTCNet(nn.Module):
         result_info = result_info + f"\nTrainable parameters: {trainable_parameters}"
 
         return result_info
-
-
-class CTCwithTDA(CTCNet):
-    def __init__(
-        self,
-        video_feature_extractor: nn.Module,
-        in_video_features: int = 1024,
-        path_to_pretrained_video_extractor: Optional[str] = None,
-        n_audio_channels: int = 512,
-        n_video_channels: int = 64,
-        thalamic_channels: int = 576,
-        audio_stage_n: int = 5,
-        video_stage_n: int = 5,
-        audio_kernel_size: int = 5,
-        video_kernel_size: int = 3,
-        fusion_steps: int = 3,
-        audio_only_steps: int = 5,
-        activation: TModule = nn.ReLU,
-        use_grad_checkpointing: bool = False,
-    ):
-        super().__init__(
-            video_feature_extractor=video_feature_extractor,
-            in_video_features=in_video_features,
-            path_to_pretrained_video_extractor=path_to_pretrained_video_extractor,
-            n_audio_channels=n_audio_channels,
-            n_video_channels=n_video_channels,
-            thalamic_channels=thalamic_channels,
-            audio_stage_n=audio_stage_n,
-            video_stage_n=video_stage_n,
-            audio_kernel_size=audio_kernel_size,
-            video_kernel_size=video_kernel_size,
-            fusion_steps=fusion_steps,
-            audio_only_steps=audio_only_steps,
-            activation=activation,
-            use_grad_checkpointing=use_grad_checkpointing,
-        )
-
-        self.visual_module = TDANet(stage_num=video_stage_n, conv_dim=n_video_channels)
