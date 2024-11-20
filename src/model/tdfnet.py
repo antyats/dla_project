@@ -38,15 +38,18 @@ class TDFNet(nn.Module):
 
         Args:
             video_feature_extractor (nn.Module): feature extractor for video features
-            in_video_features (int): number of extracted video features by video_feature_extractor
-            n_audio_channels (int, optional): number of feature channels for audio. Defaults to 512.
-            n_video_channels (int, optional): number of feature channels for video. Defaults to 64.
-            audio_stage_n (int, optional): number of stages for FRCNN in audio module. Defaults to 5.
-            video_stage_n (int, optional): number of stages for FRCNN in video module. Defaults to 5.
-            audio_kernel_size (int, optional): kernel size for audio module convolutions. Defaults to 5.
-            video_kernel_size (int, optional): kernel size for video module convolutions. Defaults to 3.
-            fusion_steps (int, optional): number of steps where audio and video are fused. Defaults to 3.
-            audio_only_steps (int, optional): number of audio-only steps after fusion. Defaults to 5.
+            in_video_features (int, optional): number of extracted video features by video_feature_extractor.
+            path_to_pretrained_video_extractor (str, optional): path to pretrained video feature extractor.
+            n_audio_channels (int, optional): number of feature channels for audio.
+            n_video_channels (int, optional): number of feature channels for video.
+            audio_stage_n (int, optional): number of stages for FRCNN in audio module.
+            video_stage_n (int, optional): number of stages for FRCNN in video module.
+            audio_kernel_size (int, optional): kernel size for audio module convolutions.
+            video_kernel_size (int, optional): kernel size for video module convolutions.
+            fusion_steps (int, optional): number of steps where audio and video are fused.
+            audio_only_steps (int, optional): number of audio-only steps after fusion.
+            activation (TModule, optional): activation function to use in modules.
+            use_grad_checkpointing (bool, optional): whether to use gradient checkpointing.
         """
         super().__init__()
         self.fusion_steps = fusion_steps

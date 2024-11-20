@@ -32,8 +32,13 @@ class TDFBlock(nn.Module):
     ):
         """
         Args:
-            stage_num (int): number of stages (nodes) in the block.
-            conv_dim (int): number of channels in the block.
+            stage_num (int, optional): number of stages (nodes).
+            conv_dim (int, optional): number of channels in the block.
+            n_heads (int, optional): number of heads in multi-head self-attention.
+            dropout (float, optional): dropout rate in self-attention and after feedforward network.
+            ffn_dim (int, optional): dimension of the feedforward network.
+            activation (TModule, optional): activation function in the transformer block.
+            norm (TModule, optional): normalization function in the transformer block.
         """
         super().__init__()
         assert stage_num > 1, f"stage_num must be greater than 1, got {stage_num=}"

@@ -5,6 +5,10 @@ from src.model.layers import ConvBlock
 
 class TDFMaskGenerator(nn.Module):
     def __init__(self, conv_dim: int = 512):
+        """
+        Args:
+            conv_dim (int, optional): number of channels.
+        """
         super().__init__()
         self.x_conv = nn.Sequential(
             nn.PReLU(),
@@ -37,5 +41,12 @@ class TDFMaskGenerator(nn.Module):
         )
 
     def forward(self, x: Tensor) -> Tensor:
+        """
+        Args:
+            x (Tensor): input tensor. Shape: (batch_size, conv_dim, seq_len)
+
+        Returns:
+            out (Tensor): mask tensor. Shape: (batch_size, conv_dim, seq_len)
+        """
         x = self.x_conv(x)
         return self.y_conv1(x) * self.y_conv2(x)
