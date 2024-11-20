@@ -12,16 +12,21 @@ class GlobalLayerNorm(nn.Module):
 
 
 class BottomUp(nn.Module):
-    def __init__(self, in_channels=512, out_channels=512, d=4):
+    def __init__(self, in_channels=512, out_channels=512, depth=4):
         super().__init__()
-        self.align = nn.Sequential(
-            nn.Conv1d(in_channels, out_channels, 1),
-            GlobalLayerNorm(out_channels),
-        )
-        self.d = d
-        self.convs = nn.ModuleList()
 
-        for i in range(d):
+        self.depth = depth
+
+        if in_channels != out_channels:
+            self.align_channels = nn.Sequential(
+                nn.Conv1d(in_channels, out_channels, 1),
+                GlobalLayerNorm(out_channels),
+            )
+        else:
+            self.align_channels = nn.Identity()
+
+        self.convs = nn.ModuleList()
+        for i in range(depth):
             self.convs.append(
                 nn.Sequential(
                     nn.Conv1d(
@@ -32,15 +37,15 @@ class BottomUp(nn.Module):
             )
 
     def forward(self, emb):
-        outputs = [self.align(emb)]
-        for i in range(self.d):
+        outputs = [self.align_channels(emb)]
+        for i in range(self.depth):
             outputs.append(self.convs[i](outputs[-1]))
 
-        sum = outputs[-1]
+        pooled_sum = outputs[-1]
         pooling_size = outputs[-1].shape[-1]
-        for i in range(self.d - 1):
-            sum += F.adaptive_avg_pool1d(outputs[i], pooling_size)
-        return outputs, sum
+        for i in range(self.depth - 1):
+            pooled_sum += F.adaptive_avg_pool1d(outputs[i], pooling_size)
+        return outputs, pooled_sum
 
 
 class FFNblock(nn.Module):
