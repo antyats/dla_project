@@ -18,53 +18,9 @@ class ThalamicNetwork(nn.Module):
         self,
         audio_n_channels: int,
         video_n_channels: int,
-        thalamic_channels: int = 576,
         activation: TModule = nn.ReLU,
     ):
         super().__init__()
-        self.audio_module_adapter = ConvBlock(
-            audio_n_channels,
-            video_n_channels,
-            kernel_size=1,
-            stride=1,
-            activation=activation,
-        )
-        self.video_module_adapter = ConvBlock(
-            video_n_channels,
-            audio_n_channels,
-            kernel_size=1,
-            stride=1,
-            activation=activation,
-        )
-
-        # self.audio_module_in = ConvBlock(
-        #     audio_n_channels,
-        #     thalamic_channels,
-        #     kernel_size=1,
-        #     stride=1,
-        #     activation=activation,
-        # )
-        # self.video_module_in = ConvBlock(
-        #     video_n_channels,
-        #     thalamic_channels,
-        #     kernel_size=1,
-        #     stride=1,
-        #     activation=activation,
-        # )
-        # self.video_module_out = nn.Sequential(
-        #     nn.Linear(
-        #         thalamic_channels,
-        #         video_n_channels,
-        #     ),
-        #     activation(),
-        # )
-        # self.audio_module_out = nn.Sequential(
-        #     nn.Linear(
-        #         thalamic_channels,
-        #         audio_n_channels,
-        #     ),
-        #     activation(),
-        # )
         self.audio_out = ConvBlock(
             audio_n_channels + video_n_channels,
             audio_n_channels,
