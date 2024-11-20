@@ -29,7 +29,6 @@ class CTCNet(nn.Module):
         path_to_pretrained_video_extractor: Optional[str] = None,
         n_audio_channels: int = 512,
         n_video_channels: int = 64,
-        thalamic_channels: int = 576,
         audio_stage_n: int = 5,
         video_stage_n: int = 5,
         audio_kernel_size: int = 5,
@@ -47,7 +46,6 @@ class CTCNet(nn.Module):
             in_video_features (int): number of extracted video features by video_feature_extractor
             n_audio_channels (int, optional): number of feature channels for audio. Defaults to 512.
             n_video_channels (int, optional): number of feature channels for video. Defaults to 64.
-            thalamic_channels (int, optional): number of feature channels for thalamic network. Defaults to 576.
             audio_stage_n (int, optional): number of stages for FRCNN in audio module. Defaults to 5.
             video_stage_n (int, optional): number of stages for FRCNN in video module. Defaults to 5.
             audio_kernel_size (int, optional): kernel size for audio module convolutions. Defaults to 5.
@@ -95,7 +93,6 @@ class CTCNet(nn.Module):
         self.fusion_module = FusionModule(
             audio_n_channels=n_audio_channels,
             video_n_channels=n_video_channels,
-            thalamic_channels=thalamic_channels,
             activation=activation,
         )
 
@@ -169,41 +166,3 @@ class CTCNet(nn.Module):
         result_info = result_info + f"\nTrainable parameters: {trainable_parameters}"
 
         return result_info
-
-
-class CTCwithTDA(CTCNet):
-    def __init__(
-        self,
-        video_feature_extractor: nn.Module,
-        in_video_features: int = 1024,
-        path_to_pretrained_video_extractor: Optional[str] = None,
-        n_audio_channels: int = 512,
-        n_video_channels: int = 64,
-        thalamic_channels: int = 576,
-        audio_stage_n: int = 5,
-        video_stage_n: int = 5,
-        audio_kernel_size: int = 5,
-        video_kernel_size: int = 3,
-        fusion_steps: int = 3,
-        audio_only_steps: int = 5,
-        activation: TModule = nn.ReLU,
-        use_grad_checkpointing: bool = False,
-    ):
-        super().__init__(
-            video_feature_extractor=video_feature_extractor,
-            in_video_features=in_video_features,
-            path_to_pretrained_video_extractor=path_to_pretrained_video_extractor,
-            n_audio_channels=n_audio_channels,
-            n_video_channels=n_video_channels,
-            thalamic_channels=thalamic_channels,
-            audio_stage_n=audio_stage_n,
-            video_stage_n=video_stage_n,
-            audio_kernel_size=audio_kernel_size,
-            video_kernel_size=video_kernel_size,
-            fusion_steps=fusion_steps,
-            audio_only_steps=audio_only_steps,
-            activation=activation,
-            use_grad_checkpointing=use_grad_checkpointing,
-        )
-
-        self.visual_module = TDANet(stage_num=video_stage_n, conv_dim=n_video_channels)
