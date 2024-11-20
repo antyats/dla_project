@@ -8,16 +8,16 @@ from src.model.layers.conv_block import ConvBlock
 TModule = TypeVar("TModule", bound=nn.Module)
 
 
-class ThalamicNetwork(nn.Module):
+class FusionModule(nn.Module):
     """
-    Thalamic network of CTCNet. It fuses audio and video features
+    Fusion network of CTCNet and TDFNet. It fuses audio and video features
     after they are processed by audio and video modules.
     """
 
     def __init__(
         self,
-        audio_n_channels: int,
-        video_n_channels: int,
+        audio_n_channels: int = 512,
+        video_n_channels: int = 64,
     ):
         super().__init__()
         self.audio_out = ConvBlock(
@@ -52,20 +52,3 @@ class ThalamicNetwork(nn.Module):
         video = self.video_out(torch.cat([adapted_audio, video], dim=1))
 
         return audio, video
-
-
-class FusionModule(nn.Module):
-    def __init__(
-        self,
-        audio_n_channels: int = 512,
-        video_n_channels: int = 64,
-    ):
-        super().__init__()
-        self.net = ThalamicNetwork(
-            audio_n_channels=audio_n_channels,
-            video_n_channels=video_n_channels,
-        )
-
-    def forward(self, audio, video, **batch):
-        new_audio, new_video = self.net(audio, video)
-        return new_audio, new_video

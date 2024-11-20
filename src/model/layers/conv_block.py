@@ -36,4 +36,11 @@ class ConvBlock(nn.Module):
         self.norm = norm(out_channels)
 
     def forward(self, x: Tensor) -> Tensor:
+        """
+        Args:
+            x (Tensor): Input tensor of shape (batch_size, in_channels, seq_len).
+
+        Returns:
+            out (Tensor): Output tensor of shape (batch_size, out_channels, seq_len),
+        """
         return self.norm(self.act(self.conv(x)))
