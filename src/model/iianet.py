@@ -341,3 +341,29 @@ class AudioDecoder(nn.Module):
 
     def forward(self, emb):
         return self.decoder(emb)
+
+
+class IIANet(nn.Module):
+    def __init__(
+        self,
+        video_encoder: nn.Module,
+        path_to_pretrained_video_encoder: str,
+        channels: int,
+        NF: int = 4,
+        NS: int = 12,
+        depth: int = 4,
+    ):
+        self.video_encoder = video_encoder
+        self.video_encoder.load_state_dict(path_to_pretrained_video_encoder)
+
+        self.audio_encoder = AudioEncoder(channels)
+        self.audio_decoder = AudioDecoder(channels)
+        self.separation = SeparationNetwork(
+            NF, NS, channels, channels, channels, channels, depth
+        )
+
+    def forward(self, wav, video):
+        es = self.audio_encoder(wav)
+        ev = self.video_encoder(video)
+        M = F.relu(self.separation(ev, es))
+        return self.audio_decoder(es * M)
