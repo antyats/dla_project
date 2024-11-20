@@ -4,7 +4,8 @@ import torch
 from torch import Tensor, nn
 from torch.utils.checkpoint import checkpoint
 
-from src.model.ctc_layers import ConvBlock, FusionModule, TDFBlock, TDFMaskGenerator
+from src.model.layers import ConvBlock, FusionModule
+from src.model.tdf_layers import TDFBlock
 
 TModule = TypeVar("TModule", bound=nn.Module)
 
@@ -29,7 +30,7 @@ class TDFNet(nn.Module):
         video_kernel_size: int = 3,
         fusion_steps: int = 3,
         audio_only_steps: int = 5,
-        activation: TModule = nn.ReLU,
+        activation: TModule = nn.PReLU,
         use_grad_checkpointing: bool = False,
     ):
         """
@@ -77,12 +78,14 @@ class TDFNet(nn.Module):
             stage_num=audio_stage_n,
             conv_dim=n_audio_channels,
             kernel_size=audio_kernel_size,
+            activation=activation,
         )
         self.visual_module = TDFBlock(
             in_dim=n_video_channels,
             stage_num=video_stage_n,
             conv_dim=n_video_channels,
             kernel_size=video_kernel_size,
+            activation=activation,
         )
         self.fusion_module = FusionModule(
             audio_n_channels=n_audio_channels,
@@ -103,8 +106,6 @@ class TDFNet(nn.Module):
             kernel_size=21,
             output_padding=9,
         )
-
-        self.mask_generator = TDFMaskGenerator(n_audio_channels)
 
     def _checkpoint(self, module, *inputs) -> Tensor:
         if self.use_grad_checkpointing:
@@ -136,8 +137,6 @@ class TDFNet(nn.Module):
 
         for _ in range(self.audio_only_steps):
             audio = self._checkpoint(self.audio_module, residual_audio + audio)
-
-        # mask = self.mask_generator(audio)
 
         audio = self.inv_fb(audio)
         return {"output_audio": audio}

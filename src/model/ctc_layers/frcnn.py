@@ -3,8 +3,7 @@ from typing import TypeVar
 import torch
 from torch import Tensor, nn
 
-from src.model.ctc_layers.conv_block import ConvBlock
-from src.model.ctc_layers.global_layer_norm import GlobalLayerNorm
+from src.model.layers import ConvBlock, GlobalLayerNorm
 
 TModule = TypeVar("TModule", bound=nn.Module)
 

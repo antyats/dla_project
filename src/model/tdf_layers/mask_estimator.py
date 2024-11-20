@@ -1,7 +1,6 @@
-import torch
 from torch import Tensor, nn
 
-from src.model.ctc_layers.conv_block import ConvBlock
+from src.model.layers import ConvBlock
 
 
 class TDFMaskGenerator(nn.Module):

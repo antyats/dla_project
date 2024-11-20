@@ -3,7 +3,7 @@ from typing import TypeVar
 import torch
 from torch import Tensor, nn
 
-from src.model.ctc_layers.conv_block import ConvBlock
+from src.model.layers.conv_block import ConvBlock
 
 TModule = TypeVar("TModule", bound=nn.Module)
 
@@ -45,15 +45,9 @@ class ThalamicNetwork(nn.Module):
             audio (Tensor): audio fused with video. Shape: (batch_size, channels_a, seq_len_a)
             video (Tensor): video fused with audio. Shape: (batch_size, channels_v, seq_len_v)
         """
-        # adapted_video = self.video_module_adapter.forward(
-        #     nn.functional.interpolate(video, audio.shape[-1])
-        # )
-        # adapted_audio = self.audio_module_adapter.forward(
-        #     nn.functional.interpolate(audio, video.shape[-1])
-        # )
         adapted_video = nn.functional.interpolate(video, audio.shape[-1])
-
         adapted_audio = nn.functional.interpolate(audio, video.shape[-1])
+
         audio = self.audio_out(torch.cat([audio, adapted_video], dim=1))
         video = self.video_out(torch.cat([adapted_audio, video], dim=1))
 

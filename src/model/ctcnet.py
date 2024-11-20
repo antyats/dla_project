@@ -4,7 +4,8 @@ import torch
 from torch import Tensor, nn
 from torch.utils.checkpoint import checkpoint
 
-from src.model.ctc_layers import AuditoryModule, ConvBlock, FusionModule, VisualModule
+from src.model.ctc_layers import AuditoryModule, VisualModule
+from src.model.layers import ConvBlock, FusionModule
 
 TModule = TypeVar("TModule", bound=nn.Module)
 
@@ -23,7 +24,6 @@ class CTCNet(nn.Module):
         path_to_pretrained_video_extractor: Optional[str] = None,
         n_audio_channels: int = 512,
         n_video_channels: int = 64,
-        thalamic_channels: int = 576,
         audio_stage_n: int = 5,
         video_stage_n: int = 5,
         audio_kernel_size: int = 5,
