@@ -14,10 +14,12 @@ class ConvBlock(nn.Module):
         out_channels: int,
         kernel_size: int = 1,
         stride: int = 1,
+        dilation: int = 1,
         padding: int = 0,
         activation: TModule = nn.ReLU,
         norm: TModule = GlobalLayerNorm,
         groups: int = 1,
+        bias=True,
     ):
         super().__init__()
         self.conv = nn.Conv1d(
@@ -27,6 +29,8 @@ class ConvBlock(nn.Module):
             stride=stride,
             padding=padding,
             groups=groups,
+            dilation=dilation,
+            bias=bias,
         )
         self.act = activation()
         self.norm = norm(out_channels)
