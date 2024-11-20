@@ -12,7 +12,7 @@ class GlobalLayerNorm(nn.Module):
 
 
 class BottomUp(nn.Module):
-    def __init__(self, in_channels=128, out_channels=512, d=4):
+    def __init__(self, in_channels=512, out_channels=512, d=4):
         super().__init__()
         self.align = nn.Sequential(
             nn.Conv1d(in_channels, out_channels, 1),
@@ -43,8 +43,25 @@ class BottomUp(nn.Module):
         return outputs, sum
 
 
+class FFNblock(nn.Module):
+    def __init__(self, channels=512):
+        super().__init__()
+        self.ffn = nn.Sequential(
+            nn.Conv1d(channels, 2 * channels, kernel_size=1, bias=False),
+            nn.ReLU(),
+            nn.Conv1d(2 * channels, 2 * channels, kernel_size=5, bias=True),
+            nn.ReLU(),
+            nn.Conv1d(2 * channels, channels, kernel_size=1, bias=False),
+            nn.ReLU(),
+            GlobalLayerNorm(channels),
+        )
+
+    def forward(self, x):
+        return self.ffn(x)
+
+
 class InterA_T(nn.Module):
-    def __init__(self, audio_channels=128, video_channels=128):
+    def __init__(self, audio_channels=512, video_channels=512):
         super().__init__()
         self.conv_audio = nn.Sequential(
             nn.Conv1d(audio_channels, video_channels, kernel_size=1),
@@ -55,24 +72,8 @@ class InterA_T(nn.Module):
             GlobalLayerNorm(audio_channels),
         )
 
-        self.ffn_a = nn.Sequential(
-            nn.Conv1d(audio_channels, 2 * audio_channels, kernel_size=1, bias=False),
-            nn.ReLU(),
-            nn.Conv1d(2 * audio_channels, 2 * audio_channels, kernel_size=5, bias=True),
-            nn.ReLU(),
-            nn.Conv1d(2 * audio_channels, audio_channels, kernel_size=1, bias=False),
-            nn.ReLU(),
-            GlobalLayerNorm(audio_channels),
-        )
-        self.ffn_v = nn.Sequential(
-            nn.Conv1d(video_channels, 2 * video_channels, kernel_size=1, bias=False),
-            nn.ReLU(),
-            nn.Conv1d(2 * video_channels, 2 * video_channels, kernel_size=5, bias=True),
-            nn.ReLU(),
-            nn.Conv1d(2 * video_channels, video_channels, kernel_size=1, bias=False),
-            nn.ReLU(),
-            GlobalLayerNorm(video_channels),
-        )
+        self.ffn_a = FFNblock(audio_channels)
+        self.ffn_v = FFNblock(video_channels)
 
     def forward(self, audio, video):
         audio_interpolate = F.interpolate(audio, size=video.shape[-1], mode="nearest")
@@ -102,7 +103,7 @@ class IntraA(nn.Module):
 
 
 class InterA_M(nn.Module):
-    def __init__(self, audio_channels=128, video_channels=128):
+    def __init__(self, audio_channels=512, video_channels=512):
         super().__init__()
         self.conv = nn.Sequential(
             nn.Conv1d(video_channels, audio_channels, kernel_size=1),
@@ -116,7 +117,7 @@ class InterA_M(nn.Module):
 
 
 class InterA_B(nn.Module):
-    def __init__(self, audio_channels=128, video_channels=128):
+    def __init__(self, audio_channels=512, video_channels=512):
         super().__init__()
         self.conv1_audio = nn.Sequential(
             nn.Conv1d(audio_channels, video_channels, kernel_size=1),
