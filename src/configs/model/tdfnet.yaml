@@ -1,4 +1,4 @@
-_target_: src.model.CTCNet
+_target_: src.model.TDFNet
 video_feature_extractor:
     _target_: src.model.lipreading.Lipreading
     backbone_type: "resnet"
@@ -10,9 +10,8 @@ in_video_features: 512
 path_to_pretrained_video_extractor: "/home/mortie/dla_project/lrw_resnet18_mstcn_video.pth"
 n_audio_channels: 512
 n_video_channels: 64
-thalamic_channels: 576
 audio_stage_n: 5
-video_stage_n: 5
+video_stage_n: 4
 audio_kernel_size: 5
 video_kernel_size: 3
 fusion_steps: 3
@@ -20,4 +19,4 @@ audio_only_steps: 3
 activation:
     _target_: hydra.utils.get_class
     path: torch.nn.PReLU
-use_grad_checkpointing: True
+use_grad_checkpointing: False

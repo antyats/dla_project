@@ -1,5 +1,5 @@
 defaults:
-    - model: ctcnet
+    - model: tdfnet
     - writer: wandb
     - metrics: avss_metrics
     - datasets: full_dataset
@@ -15,7 +15,7 @@ lr_scheduler:
     _target_: torch.optim.lr_scheduler.ReduceLROnPlateau
     mode: max
     factor: 0.5
-    patience: 5
+    patience: 3
 loss_function:
     _target_: src.loss.SI_SNR
 trainer:
@@ -37,6 +37,6 @@ trainer:
         _target_: torch.__dict__.get
         _args_:
             - bfloat16
-    compile_model: False
+    compile_model: True
     max_grad_norm: 5
     lr_scheduler_mode: "epoch"

@@ -18,7 +18,6 @@ class ThalamicNetwork(nn.Module):
         self,
         audio_n_channels: int,
         video_n_channels: int,
-        activation: TModule = nn.ReLU,
     ):
         super().__init__()
         self.audio_out = ConvBlock(
@@ -26,7 +25,7 @@ class ThalamicNetwork(nn.Module):
             audio_n_channels,
             kernel_size=1,
             stride=1,
-            activation=activation,
+            activation=nn.Identity,
         )
 
         self.video_out = ConvBlock(
@@ -34,7 +33,7 @@ class ThalamicNetwork(nn.Module):
             video_n_channels,
             kernel_size=1,
             stride=1,
-            activation=activation,
+            activation=nn.Identity,
         )
 
     def forward(self, audio: Tensor, video: Tensor) -> Tensor:
@@ -66,20 +65,13 @@ class FusionModule(nn.Module):
         self,
         audio_n_channels: int = 512,
         video_n_channels: int = 64,
-        thalamic_channels: int = 576,
-        activation: TModule = nn.ReLU,
     ):
         super().__init__()
         self.net = ThalamicNetwork(
             audio_n_channels=audio_n_channels,
             video_n_channels=video_n_channels,
-            thalamic_channels=thalamic_channels,
-            activation=activation,
         )
 
     def forward(self, audio, video, **batch):
         new_audio, new_video = self.net(audio, video)
-        # audio = audio + new_audio
-        # video = video + new_video
-
         return new_audio, new_video

@@ -4,28 +4,27 @@ import torch
 from torch import Tensor, nn
 from torch.utils.checkpoint import checkpoint
 
-from src.model.ctc_layers import AuditoryModule, ConvBlock, FusionModule, VisualModule
+from src.model.ctc_layers import ConvBlock, FusionModule, TDFBlock, TDFMaskGenerator
 
 TModule = TypeVar("TModule", bound=nn.Module)
 
 
-class CTCNet(nn.Module):
+class TDFNet(nn.Module):
     """
-    AVSS model CTCNet.
+    AVSS model TDFNet.
 
-    https://arxiv.org/pdf/2212.10744
+    https://arxiv.org/pdf/2401.14185v1
     """
 
     def __init__(
         self,
         video_feature_extractor: nn.Module,
-        in_video_features: int = 1024,
+        in_video_features: int = 512,
         path_to_pretrained_video_extractor: Optional[str] = None,
         n_audio_channels: int = 512,
         n_video_channels: int = 64,
-        thalamic_channels: int = 576,
         audio_stage_n: int = 5,
-        video_stage_n: int = 5,
+        video_stage_n: int = 4,
         audio_kernel_size: int = 5,
         video_kernel_size: int = 3,
         fusion_steps: int = 3,
@@ -34,14 +33,13 @@ class CTCNet(nn.Module):
         use_grad_checkpointing: bool = False,
     ):
         """
-        Initializes the CTCNet.
+        Initializes the TDFNet.
 
         Args:
             video_feature_extractor (nn.Module): feature extractor for video features
             in_video_features (int): number of extracted video features by video_feature_extractor
             n_audio_channels (int, optional): number of feature channels for audio. Defaults to 512.
             n_video_channels (int, optional): number of feature channels for video. Defaults to 64.
-            thalamic_channels (int, optional): number of feature channels for thalamic network. Defaults to 576.
             audio_stage_n (int, optional): number of stages for FRCNN in audio module. Defaults to 5.
             video_stage_n (int, optional): number of stages for FRCNN in video module. Defaults to 5.
             audio_kernel_size (int, optional): kernel size for audio module convolutions. Defaults to 5.
@@ -74,17 +72,17 @@ class CTCNet(nn.Module):
             norm=nn.BatchNorm1d,
         )
 
-        self.audio_module = AuditoryModule(
+        self.audio_module = TDFBlock(
+            in_dim=n_audio_channels,
             stage_num=audio_stage_n,
             conv_dim=n_audio_channels,
             kernel_size=audio_kernel_size,
-            activation=activation,
         )
-        self.visual_module = VisualModule(
+        self.visual_module = TDFBlock(
+            in_dim=n_video_channels,
             stage_num=video_stage_n,
             conv_dim=n_video_channels,
             kernel_size=video_kernel_size,
-            activation=activation,
         )
         self.fusion_module = FusionModule(
             audio_n_channels=n_audio_channels,
@@ -106,10 +104,7 @@ class CTCNet(nn.Module):
             output_padding=9,
         )
 
-        self.linear_head = nn.Sequential(
-            nn.Linear(in_features=n_audio_channels, out_features=n_audio_channels),
-            activation(),
-        )
+        self.mask_generator = TDFMaskGenerator(n_audio_channels)
 
     def _checkpoint(self, module, *inputs) -> Tensor:
         if self.use_grad_checkpointing:
@@ -136,15 +131,15 @@ class CTCNet(nn.Module):
             video = self._checkpoint(self.visual_module, residual_video + video)
 
             audio, video = self._checkpoint(
-                self.fusion_module, residual_audio + audio, residual_video + video
+                self.fusion_module, residual_audio, residual_video
             )
 
         for _ in range(self.audio_only_steps):
             audio = self._checkpoint(self.audio_module, residual_audio + audio)
 
-        mask = self.linear_head(audio.transpose(-1, -2)).transpose(-1, -2)
+        # mask = self.mask_generator(audio)
 
-        audio = self.inv_fb(residual_audio * mask)
+        audio = self.inv_fb(audio)
         return {"output_audio": audio}
 
     def __str__(self):
