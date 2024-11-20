@@ -247,5 +247,5 @@ class AudioBlock(nn.Module):
 
         s0 = s[-1]
         for i in range(self.depth - 2, -1, -1):
-            self.internal_intra_a_audio(s[i], s0)
+            s0 = self.internal_intra_a_audio(s[i], s0)
         return s0
