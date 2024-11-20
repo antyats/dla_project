@@ -249,3 +249,56 @@ class AudioBlock(nn.Module):
         for i in range(self.depth - 2, -1, -1):
             s0 = self.internal_intra_a_audio(s[i], s0)
         return s0
+
+
+class SeparationNetwork(nn.Module):
+    def __init__(
+        self,
+        NF=4,
+        NS=12,
+        audio_in_channels=512,
+        video_in_channels=512,
+        audio_out_channels=512,
+        video_out_channels=512,
+        depth=4,
+    ):
+        super().__init__()
+        self.NF = NF
+        self.NS = NS
+
+        self.fusion_blocks = nn.ModuleList()
+        self.audio_blocks = nn.ModuleList()
+
+        for i in range(NF):
+            if i == 0:
+                self.fusion_blocks.append(
+                    FusionBlock(
+                        audio_in_channels,
+                        video_in_channels,
+                        audio_out_channels,
+                        video_out_channels,
+                        depth,
+                    )
+                )
+            else:
+                self.fusion_blocks.append(
+                    FusionBlock(
+                        audio_out_channels,
+                        video_out_channels,
+                        audio_out_channels,
+                        video_out_channels,
+                        depth,
+                    )
+                )
+
+        for i in range(NS):
+            self.audio_blocks.append(
+                AudioBlock(audio_out_channels, audio_out_channels, depth)
+            )
+
+    def forward(self, es, ev):
+        for i in range(self.NF):
+            es, ev = self.fusion_blocks[i](es, ev)
+        for i in range(self.NS):
+            es = self.audio_blocks[i](es)
+        return es
