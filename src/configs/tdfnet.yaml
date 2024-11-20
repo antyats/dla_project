@@ -15,7 +15,7 @@ lr_scheduler:
     _target_: torch.optim.lr_scheduler.ReduceLROnPlateau
     mode: max
     factor: 0.5
-    patience: 3
+    patience: 2
 loss_function:
     _target_: src.loss.SI_SNR
 trainer:

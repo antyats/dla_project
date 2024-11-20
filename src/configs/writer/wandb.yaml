@@ -1,7 +1,7 @@
 _target_: src.logger.WandBWriter
 project_name: "dla_avss_project_test"
 entity: null
-run_name: "tdfnet - remove mask, try to use frcnn instead of transformer in audio 1"
+run_name: "tdfnet - 5 audio only layers, server"
 mode: "online"
 loss_names: ["loss"] # which losses to log (useful for multi-loss tasks, s.a. GANs)
 log_checkpoints: False # set to True if you want to log save_dir with checkpoints to W&B
