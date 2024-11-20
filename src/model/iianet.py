@@ -307,3 +307,37 @@ class SeparationNetwork(nn.Module):
         for i in range(self.NS):
             es = self.audio_blocks[i](es)
         return es
+
+
+class AudioEncoder(nn.Module):
+    def __init__(self, out_channels=512, kernel_size=16, stride=8):
+        super().__init__()
+
+        self.encoder = nn.Conv1d(
+            in_channels=1,
+            out_channels=out_channels,
+            kernel_size=kernel_size,
+            stride=stride,
+            padding=(kernel_size - 1) // 2,
+            bias=False,
+        )
+
+    def forward(self, wav):
+        return self.encoder(wav)
+
+
+class AudioDecoder(nn.Module):
+    def __init__(self, in_channels=512, kernel_size=16, stride=8):
+        super().__init__()
+
+        self.decoder = nn.ConvTranspose1d(
+            in_channels=in_channels,
+            out_channels=1,
+            kernel_size=kernel_size,
+            stride=stride,
+            padding=(kernel_size - 1) // 2,
+            bias=False,
+        )
+
+    def forward(self, emb):
+        return self.decoder(emb)
