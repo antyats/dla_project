@@ -116,6 +116,7 @@ class FRCNNBlock(nn.Module):
         Returns:
             out (Tensor): tensor, processed by FRCNN block. Shape: (batch_size, conv_dim, seq_len)
         """
+        residual = x
         left = [x]
         for i in range(self.stage_num - 1):
             left.append(self.initial_cons[i](left[-1]))
@@ -139,9 +140,12 @@ class FRCNNBlock(nn.Module):
                 )
             )
 
-        return self.final_concat(
-            torch.cat(
-                [nn.functional.interpolate(x, right[0].shape[-1]) for x in right],
-                dim=1,
+        return (
+            self.final_concat(
+                torch.cat(
+                    [nn.functional.interpolate(x, right[0].shape[-1]) for x in right],
+                    dim=1,
+                )
             )
+            + residual
         )

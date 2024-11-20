@@ -4,8 +4,8 @@ import torch
 from torch import Tensor, nn
 from torch.utils.checkpoint import checkpoint
 
-from src.model.ctc_layers import AuditoryModule, VisualModule
-from src.model.layers import ConvBlock, FusionModule
+from src.model.ctc_layers import FRCNNBlock
+from src.model.layers import ConvBlock, FusionModule, GlobalLayerNorm
 
 TModule = TypeVar("TModule", bound=nn.Module)
 
@@ -76,17 +76,19 @@ class CTCNet(nn.Module):
             norm=nn.BatchNorm1d,
         )
 
-        self.audio_module = AuditoryModule(
+        self.audio_module = FRCNNBlock(
             stage_num=audio_stage_n,
             conv_dim=n_audio_channels,
             kernel_size=audio_kernel_size,
             activation=activation,
+            norm=GlobalLayerNorm,
         )
-        self.visual_module = VisualModule(
+        self.visual_module = FRCNNBlock(
             stage_num=video_stage_n,
             conv_dim=n_video_channels,
             kernel_size=video_kernel_size,
             activation=activation,
+            norm=nn.BatchNorm1d,
         )
         self.fusion_module = FusionModule(
             audio_n_channels=n_audio_channels,
