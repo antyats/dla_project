@@ -16,7 +16,7 @@ class BottomUp(nn.Module):
         super().__init__()
         self.align = nn.Sequential(
             nn.Conv1d(in_channels, out_channels, 1),
-            nn.GlobalLayerNorm(out_channels),
+            GlobalLayerNorm(out_channels),
         )
         self.d = d
         self.convs = nn.ModuleList()
@@ -27,7 +27,7 @@ class BottomUp(nn.Module):
                     nn.Conv1d(
                         out_channels, out_channels, kernel_size=5, stride=2, padding=2
                     ),
-                    nn.GlobalLayerNorm(out_channels),
+                    GlobalLayerNorm(out_channels),
                 )
             )
 
@@ -48,11 +48,11 @@ class InterA_T(nn.Module):
         super().__init__()
         self.conv_audio = nn.Sequential(
             nn.Conv1d(audio_channels, video_channels, kernel_size=1),
-            nn.GlobalLayerNorm(video_channels),
+            GlobalLayerNorm(video_channels),
         )
         self.conv_video = nn.Sequential(
             nn.Conv1d(video_channels, audio_channels, kernel_size=1),
-            nn.GlobalLayerNorm(audio_channels),
+            GlobalLayerNorm(audio_channels),
         )
 
         self.ffn_a = nn.Sequential(
@@ -85,18 +85,18 @@ class InterA_T(nn.Module):
 class IntraA(nn.Module):
     def __init__(self, x_channels, y_channels):
         super().__init__()
-        self.conv_1 = nn.Sequential(
+        self.conv1 = nn.Sequential(
             nn.Conv1d(y_channels, x_channels, kernel_size=1),
-            nn.GlobalLayerNorm(x_channels),
+            GlobalLayerNorm(x_channels),
         )
-        self.conv_2 = nn.Sequential(
+        self.conv2 = nn.Sequential(
             nn.Conv1d(y_channels, x_channels, kernel_size=1),
-            nn.GlobalLayerNorm(x_channels),
+            GlobalLayerNorm(x_channels),
         )
 
     def forward(self, x, y):
         y_interpolate = F.interpolate(y, size=x.shape[-1], mode="nearest")
-        x *= F.sigmoid(self.conv_1(y_interpolate))
+        x *= F.sigmoid(self.conv1(y_interpolate))
         x += self.conv2(y_interpolate)
         return x
 
@@ -106,7 +106,7 @@ class InterA_M(nn.Module):
         super().__init__()
         self.conv = nn.Sequential(
             nn.Conv1d(video_channels, audio_channels, kernel_size=1),
-            nn.GlobalLayerNorm(audio_channels),
+            GlobalLayerNorm(audio_channels),
         )
 
     def forward(self, audio, video):
@@ -120,19 +120,19 @@ class InterA_B(nn.Module):
         super().__init__()
         self.conv1_audio = nn.Sequential(
             nn.Conv1d(audio_channels, video_channels, kernel_size=1),
-            nn.GlobalLayerNorm(video_channels),
+            GlobalLayerNorm(video_channels),
         )
         self.conv2_audio = nn.Sequential(
             nn.Conv1d(video_channels, audio_channels, kernel_size=1),
-            nn.GlobalLayerNorm(audio_channels),
+            GlobalLayerNorm(audio_channels),
         )
         self.conv1_video = nn.Sequential(
             nn.Conv1d(video_channels, audio_channels, kernel_size=1),
-            nn.GlobalLayerNorm(audio_channels),
+            GlobalLayerNorm(audio_channels),
         )
         self.conv2_video = nn.Sequential(
             nn.Conv1d(audio_channels, video_channels, kernel_size=1),
-            nn.GlobalLayerNorm(video_channels),
+            GlobalLayerNorm(video_channels),
         )
 
     def forward(self, audio, video):
