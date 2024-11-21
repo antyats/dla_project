@@ -1,0 +1,11 @@
+train:
+    _target_: src.datasets.DLADataset
+    data_dir: "../dla_dataset"
+    part: "train"
+    instance_transforms: ${transforms.instance_transforms.train}
+val:
+    _target_: src.datasets.DLADataset
+    data_dir: "../dla_dataset"
+    part: "val"
+    limit: 1000
+    instance_transforms: ${transforms.instance_transforms.inference}

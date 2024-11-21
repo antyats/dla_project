@@ -17,7 +17,7 @@ def collate_fn(dataset_items: list[dict]):
 
     batch = {}
     batch["mix_audio"] = pad_sequence(
-        [item["mix_audio"].squeeze(0) for item in dataset_items], batch_first=True
+        [item["mix_audio"] for item in dataset_items], batch_first=True
     ).repeat(2, 1, 1)
 
     batch["mix_audio_len"] = torch.tensor(

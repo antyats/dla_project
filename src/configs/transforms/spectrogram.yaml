@@ -1,8 +1,9 @@
 defaults:
-  - batch_transforms: example
+  - instance_transforms: get_spectrogram
   - _self_
 
 # these lines are required if you do not use instance transforms
-instance_transforms:
+
+batch_transforms:
   train: null
   inference: null
