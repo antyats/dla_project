@@ -73,54 +73,67 @@ class BaseDataset(Dataset):
         speaker2_video_path = data_dict["speaker2_video_path"]
 
         mix_audio = self.load_audio(mix_audio_path)
-        speaker1_video = self.load_video(speaker1_video_path)
-        speaker2_video = self.load_video(speaker2_video_path)
-
         mix_audio = self.wave_augmentation(mix_audio)
         mix_spectrogram = self.get_spectrogram(mix_audio)
         mix_spectrogram = self.spectrogram_augmentation(mix_spectrogram)
 
+        speaker1_video = self.load_video(speaker1_video_path)
         speaker1_video = self.video_augmentation(speaker1_video)
+
+        speaker2_video = self.load_video(speaker2_video_path)
         speaker2_video = self.video_augmentation(speaker2_video)
 
         instance_data = {
             "mix_audio": mix_audio,
             "mix_audio_len": mix_audio.size(-1),
-            "mix_spectrogram": mix_spectrogram,
-            "mix_spectrogram_len": (
-                mix_spectrogram.size(-1) if mix_spectrogram is not None else None
-            ),
             "video1": speaker1_video,
             "video1_len": speaker1_video.size(0),
             "video2": speaker2_video,
             "video2_len": speaker2_video.size(0),
         }
-        if (speaker1_audio_path and speaker1_audio_path) is not None:
+        if mix_spectrogram is not None:
+            instance_data.update(
+                {
+                    "mix_spectrogram": mix_spectrogram,
+                    "mix_spectrogram_len": mix_spectrogram.size(-1),
+                }
+            )
+
+        if (speaker1_audio_path is not None) and (speaker2_audio_path is not None):
             speaker1_audio = self.load_audio(speaker1_audio_path)
-            speaker2_audio = self.load_audio(speaker2_audio_path)
+            speaker1_audio = self.wave_augmentation(speaker1_audio, target=True)
             speaker1_spectrogram = self.get_spectrogram(speaker1_audio)
+            speaker1_spectrogram = self.spectrogram_augmentation(
+                speaker1_spectrogram, target=True
+            )
+
+            speaker2_audio = self.load_audio(speaker2_audio_path)
+            speaker2_audio = self.wave_augmentation(speaker2_audio, target=True)
             speaker2_spectrogram = self.get_spectrogram(speaker2_audio)
+            speaker2_spectrogram = self.spectrogram_augmentation(
+                speaker2_spectrogram, target=True
+            )
 
             instance_data.update(
                 {
                     "speaker1_audio": speaker1_audio,
                     "speaker1_audio_len": speaker1_audio.size(-1),
-                    "speaker1_spectrogram": speaker1_spectrogram,
-                    "speaker1_spectrogram_len": (
-                        speaker1_spectrogram.size(-1)
-                        if speaker1_spectrogram is not None
-                        else None
-                    ),
                     "speaker2_audio": speaker2_audio,
                     "speaker2_audio_len": speaker2_audio.size(-1),
-                    "speaker2_spectrogram": speaker2_spectrogram,
-                    "speaker2_spectrogram_len": (
-                        speaker2_spectrogram.size(-1)
-                        if speaker2_spectrogram is not None
-                        else None
-                    ),
                 }
             )
+
+            if (speaker1_spectrogram is not None) and (
+                speaker2_spectrogram is not None
+            ):
+                instance_data.update(
+                    {
+                        "speaker1_spectrogram": speaker1_spectrogram,
+                        "speaker1_spectrogram_len": speaker1_spectrogram.size(-1),
+                        "speaker2_spectrogram": speaker2_spectrogram,
+                        "speaker2_spectrogram_len": speaker2_spectrogram.size(-1),
+                    }
+                )
 
         return instance_data
 
@@ -157,17 +170,25 @@ class BaseDataset(Dataset):
                 return self.instance_transforms["get_spectrogram"](audio)
         return None
 
-    def wave_augmentation(self, audio):
+    def wave_augmentation(self, audio, target=False):
         if self.instance_transforms is not None:
             for transform_name in self.instance_transforms.keys():
-                if transform_name == "audio":
+                if transform_name == "audio" and not target:
+                    audio = self.instance_transforms[transform_name](audio)
+                if (
+                    transform_name == "target_audio" and target
+                ):  # augmentations for target
                     audio = self.instance_transforms[transform_name](audio)
         return audio
 
-    def spectrogram_augmentation(self, spectrogram):
+    def spectrogram_augmentation(self, spectrogram, target=False):
         if self.instance_transforms is not None:
             for transform_name in self.instance_transforms.keys():
-                if transform_name == "spectrogram":
+                if transform_name == "spectrogram" and not target:
+                    spectrogram = self.instance_transforms[transform_name](spectrogram)
+                if (
+                    transform_name == "target_spectrogram" and target
+                ):  # augmentations for target
                     spectrogram = self.instance_transforms[transform_name](spectrogram)
         return spectrogram
 
