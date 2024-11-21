@@ -3,8 +3,8 @@ defaults:
     - writer: wandb
     - metrics: avss_metrics
     - datasets: full_dataset
-    - dataloader: example
-    - transforms: no_transforms
+    - dataloader: dataloader
+    - transforms: spectrogram
     - _self_
 optimizer:
     _target_: torch.optim.AdamW

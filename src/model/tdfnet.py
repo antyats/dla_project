@@ -110,10 +110,20 @@ class TDFNet(nn.Module):
             output_padding=9,
         )
 
-    def _checkpoint(self, module, *inputs) -> Tensor:
+    def _checkpoint_audio(self, *inputs) -> Tensor:
         if self.use_grad_checkpointing:
-            return checkpoint(module, *inputs)
-        return module(*inputs)
+            return checkpoint(self.audio_module, *inputs, use_reentrant=False)
+        return self.audio_module(*inputs)
+
+    def _checkpoint_video(self, *inputs) -> Tensor:
+        if self.use_grad_checkpointing:
+            return checkpoint(self.visual_module, *inputs, use_reentrant=False)
+        return self.visual_module(*inputs)
+
+    def _checkpoint_fusion(self, *inputs) -> Tensor:
+        if self.use_grad_checkpointing:
+            return checkpoint(self.fusion_module, *inputs, use_reentrant=False)
+        return self.fusion_module(*inputs)
 
     def forward(self, mix_audio: Tensor, video: Tensor, **batch) -> dict:
         """
@@ -131,15 +141,13 @@ class TDFNet(nn.Module):
         residual_audio, residual_video = audio, video
 
         for _ in range(self.fusion_steps):
-            audio = self._checkpoint(self.audio_module, residual_audio + audio)
-            video = self._checkpoint(self.visual_module, residual_video + video)
+            audio = self._checkpoint_audio(residual_audio + audio)
+            video = self._checkpoint_video(residual_video + video)
 
-            audio, video = self._checkpoint(
-                self.fusion_module, residual_audio, residual_video
-            )
+            audio, video = self._checkpoint_fusion(residual_audio, residual_video)
 
         for _ in range(self.audio_only_steps):
-            audio = self._checkpoint(self.audio_module, residual_audio + audio)
+            audio = self._checkpoint_audio(residual_audio + audio)
 
         audio = self.inv_fb(audio)
         return {"output_audio": audio}

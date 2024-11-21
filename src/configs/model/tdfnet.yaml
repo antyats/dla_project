@@ -7,7 +7,7 @@ video_feature_extractor:
     width_mult: 1.0
     extract_feats: True
 in_video_features: 512
-path_to_pretrained_video_extractor: "/home/admin/dla_project/lrw_resnet18_mstcn_video.pth"
+path_to_pretrained_video_extractor: "./pretrained_video_models/lrw_resnet18_mstcn_video.pth"
 n_audio_channels: 512
 n_video_channels: 64
 audio_stage_n: 5
