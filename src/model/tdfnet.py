@@ -4,28 +4,28 @@ import torch
 from torch import Tensor, nn
 from torch.utils.checkpoint import checkpoint
 
-from src.model.ctc_layers import FRCNNBlock
-from src.model.layers import ConvBlock, FusionModule, GlobalLayerNorm
+from src.model.layers import ConvBlock, FusionModule
+from src.model.tdf_layers import TDFBlock
 
 TModule = TypeVar("TModule", bound=nn.Module)
 
 
-class CTCNet(nn.Module):
+class TDFNet(nn.Module):
     """
-    AVSS model CTCNet.
+    AVSS model TDFNet.
 
-    https://arxiv.org/pdf/2212.10744
+    https://arxiv.org/pdf/2401.14185v1
     """
 
     def __init__(
         self,
         video_feature_extractor: nn.Module,
-        in_video_features: int = 1024,
+        in_video_features: int = 512,
         path_to_pretrained_video_extractor: Optional[str] = None,
         n_audio_channels: int = 512,
         n_video_channels: int = 64,
         audio_stage_n: int = 5,
-        video_stage_n: int = 5,
+        video_stage_n: int = 4,
         audio_kernel_size: int = 5,
         video_kernel_size: int = 3,
         fusion_steps: int = 3,
@@ -34,11 +34,11 @@ class CTCNet(nn.Module):
         use_grad_checkpointing: bool = False,
     ):
         """
-        Initializes the CTCNet.
+        Initializes the TDFNet.
 
         Args:
             video_feature_extractor (nn.Module): feature extractor for video features
-            in_video_features (int): number of extracted video features by video_feature_extractor
+            in_video_features (int, optional): number of extracted video features by video_feature_extractor.
             path_to_pretrained_video_extractor (str, optional): path to pretrained video feature extractor.
             n_audio_channels (int, optional): number of feature channels for audio.
             n_video_channels (int, optional): number of feature channels for video.
@@ -76,19 +76,19 @@ class CTCNet(nn.Module):
             norm=nn.BatchNorm1d,
         )
 
-        self.audio_module = FRCNNBlock(
+        self.audio_module = TDFBlock(
+            in_dim=n_audio_channels,
             stage_num=audio_stage_n,
             conv_dim=n_audio_channels,
             kernel_size=audio_kernel_size,
             activation=activation,
-            norm=GlobalLayerNorm,
         )
-        self.visual_module = FRCNNBlock(
+        self.visual_module = TDFBlock(
+            in_dim=n_video_channels,
             stage_num=video_stage_n,
             conv_dim=n_video_channels,
             kernel_size=video_kernel_size,
             activation=activation,
-            norm=nn.BatchNorm1d,
         )
         self.fusion_module = FusionModule(
             audio_n_channels=n_audio_channels,
@@ -110,15 +110,20 @@ class CTCNet(nn.Module):
             output_padding=9,
         )
 
-        self.linear_head = nn.Sequential(
-            nn.Linear(in_features=n_audio_channels, out_features=n_audio_channels),
-            activation(),
-        )
-
-    def _checkpoint(self, module, *inputs) -> Tensor:
+    def _checkpoint_audio(self, *inputs) -> Tensor:
         if self.use_grad_checkpointing:
-            return checkpoint(module, *inputs)
-        return module(*inputs)
+            return checkpoint(self.audio_module, *inputs, use_reentrant=False)
+        return self.audio_module(*inputs)
+
+    def _checkpoint_video(self, *inputs) -> Tensor:
+        if self.use_grad_checkpointing:
+            return checkpoint(self.visual_module, *inputs, use_reentrant=False)
+        return self.visual_module(*inputs)
+
+    def _checkpoint_fusion(self, *inputs) -> Tensor:
+        if self.use_grad_checkpointing:
+            return checkpoint(self.fusion_module, *inputs, use_reentrant=False)
+        return self.fusion_module(*inputs)
 
     def forward(self, mix_audio: Tensor, video: Tensor, **batch) -> dict:
         """
@@ -136,19 +141,15 @@ class CTCNet(nn.Module):
         residual_audio, residual_video = audio, video
 
         for _ in range(self.fusion_steps):
-            audio = self._checkpoint(self.audio_module, residual_audio + audio)
-            video = self._checkpoint(self.visual_module, residual_video + video)
+            audio = self._checkpoint_audio(residual_audio + audio)
+            video = self._checkpoint_video(residual_video + video)
 
-            audio, video = self._checkpoint(
-                self.fusion_module, residual_audio + audio, residual_video + video
-            )
+            audio, video = self._checkpoint_fusion(residual_audio, residual_video)
 
         for _ in range(self.audio_only_steps):
-            audio = self._checkpoint(self.audio_module, residual_audio + audio)
+            audio = self._checkpoint_audio(residual_audio + audio)
 
-        mask = self.linear_head(audio.transpose(-1, -2)).transpose(-1, -2)
-
-        audio = self.inv_fb(residual_audio * mask)
+        audio = self.inv_fb(audio)
         return {"output_audio": audio}
 
     def __str__(self):

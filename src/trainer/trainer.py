@@ -36,7 +36,8 @@ class Trainer(BaseTrainer):
         metric_funcs = self.metrics["inference"]
         if self.is_train:
             metric_funcs = self.metrics["train"]
-            self.optimizer.zero_grad()
+            if self.n_grad_accum_steps == 1 or batch_idx % self.n_grad_accum_steps == 1:
+                self.optimizer.zero_grad()
         with amp.autocast(
             device_type=self.device,
             dtype=self.amp_float_type,
