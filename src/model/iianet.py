@@ -1,3 +1,4 @@
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
@@ -169,7 +170,7 @@ class FusionBlock(nn.Module):
 
         self.depth = depth
         self.bottom_up_audio = BottomUp(audio_in_channels, audio_out_channels, depth)
-        self.bottom_up_video = BottomUp(video_in_channels, audio_out_channels, depth)
+        self.bottom_up_video = BottomUp(video_in_channels, video_out_channels, depth)
 
         self.inter_a_t = InterA_T(audio_out_channels, video_out_channels)
         self.inter_a_b = InterA_B(audio_out_channels, video_out_channels)
@@ -252,7 +253,7 @@ class AudioBlock(nn.Module):
 
         s0 = s[-1]
         for i in range(self.depth - 2, -1, -1):
-            s0 = self.internal_intra_a_audio(s[i], s0)
+            s0 = self.internal_intra_a_audio[i](s[i], s0)
         return s0
 
 
@@ -262,7 +263,7 @@ class SeparationNetwork(nn.Module):
         NF=4,
         NS=12,
         audio_in_channels=512,
-        video_in_channels=512,
+        video_in_channels=50,
         audio_out_channels=512,
         video_out_channels=512,
         depth=4,
@@ -318,7 +319,7 @@ class AudioEncoder(nn.Module):
             out_channels=out_channels,
             kernel_size=kernel_size,
             stride=stride,
-            padding=(kernel_size - 1) // 2,
+            padding=(kernel_size - stride) // 2,
             bias=False,
         )
 
@@ -335,7 +336,7 @@ class AudioDecoder(nn.Module):
             out_channels=1,
             kernel_size=kernel_size,
             stride=stride,
-            padding=(kernel_size - 1) // 2,
+            padding=(kernel_size - stride) // 2,
             bias=False,
         )
 
@@ -348,22 +349,38 @@ class IIANet(nn.Module):
         self,
         video_encoder: nn.Module,
         path_to_pretrained_video_encoder: str,
-        channels: int,
+        audio_emb_channels: int = 512,
+        video_emb_channels: int = 50,
+        hidden_audio_emb_channels: int = 512,
+        hidden_video_emb_channels: int = 512,
         NF: int = 4,
         NS: int = 12,
-        depth: int = 4,
+        bottomup_depth: int = 4,
     ):
+        super().__init__()
         self.video_encoder = video_encoder
-        self.video_encoder.load_state_dict(path_to_pretrained_video_encoder)
-
-        self.audio_encoder = AudioEncoder(channels)
-        self.audio_decoder = AudioDecoder(channels)
-        self.separation = SeparationNetwork(
-            NF, NS, channels, channels, channels, channels, depth
+        self.video_encoder.load_state_dict(
+            torch.load(path_to_pretrained_video_encoder, map_location="cpu")[
+                "model_state_dict"
+            ]
         )
 
-    def forward(self, wav, video):
-        es = self.audio_encoder(wav)
-        ev = self.video_encoder(video)
-        M = F.relu(self.separation(ev, es))
+        self.audio_encoder = AudioEncoder(audio_emb_channels)
+        self.audio_decoder = AudioDecoder(hidden_audio_emb_channels)
+        self.separation = SeparationNetwork(
+            NF=NF,
+            NS=NS,
+            audio_in_channels=audio_emb_channels,
+            video_in_channels=video_emb_channels,
+            audio_out_channels=hidden_audio_emb_channels,
+            video_out_channels=hidden_video_emb_channels,
+            depth=bottomup_depth,
+        )
+
+    def forward(self, mix_audio, video, **batch):
+        print(mix_audio.shape)
+        print("***")
+        es = self.audio_encoder(mix_audio)
+        ev = self.video_encoder(video, lengths=None)
+        M = F.relu(self.separation(es, ev))
         return self.audio_decoder(es * M)
