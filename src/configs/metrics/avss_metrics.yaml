@@ -9,7 +9,7 @@ inference: # metrics that are calculated during inference (eval)
       reduction: "mean"
       mode: "wb"
       name: "PESQ"
-      n_processes: 1
+      n_processes: 4
       keep_same_device: False
     - _target_: src.metrics.STOI
       sample_rate: 16000

@@ -62,7 +62,9 @@ class CTCNet(nn.Module):
         if path_to_pretrained_video_extractor is not None:
             print("loading pretrained video feature extractor")
             self.video_feature_extractor.load_state_dict(
-                torch.load(path_to_pretrained_video_extractor)["model_state_dict"]
+                torch.load(path_to_pretrained_video_extractor, map_location="cpu")[
+                    "model_state_dict"
+                ]
             )
         for param in self.video_feature_extractor.parameters():
             param.requires_grad = False

@@ -28,6 +28,8 @@ class TDFNet(nn.Module):
         video_stage_n: int = 4,
         audio_kernel_size: int = 5,
         video_kernel_size: int = 3,
+        audio_ga_type: str = "transformer",
+        video_ga_type: str = "transformer",
         fusion_steps: int = 3,
         audio_only_steps: int = 5,
         activation: TModule = nn.PReLU,
@@ -62,7 +64,9 @@ class TDFNet(nn.Module):
         if path_to_pretrained_video_extractor is not None:
             print("loading pretrained video feature extractor")
             self.video_feature_extractor.load_state_dict(
-                torch.load(path_to_pretrained_video_extractor)["model_state_dict"]
+                torch.load(path_to_pretrained_video_extractor, map_location="cpu")[
+                    "model_state_dict"
+                ]
             )
         for param in self.video_feature_extractor.parameters():
             param.requires_grad = False
@@ -82,6 +86,7 @@ class TDFNet(nn.Module):
             conv_dim=n_audio_channels,
             kernel_size=audio_kernel_size,
             activation=activation,
+            ga_type=audio_ga_type,
         )
         self.visual_module = TDFBlock(
             in_dim=n_video_channels,
@@ -89,6 +94,7 @@ class TDFNet(nn.Module):
             conv_dim=n_video_channels,
             kernel_size=video_kernel_size,
             activation=activation,
+            ga_type=video_ga_type,
         )
         self.fusion_module = FusionModule(
             audio_n_channels=n_audio_channels,
