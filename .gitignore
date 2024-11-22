@@ -112,3 +112,6 @@ outputs/
 .vscode/
 .idea/
 __MACOSX/
+
+pretrained_video_models/*.pth
+pretrained_video_models/*.npz

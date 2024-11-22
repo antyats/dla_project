@@ -4,8 +4,8 @@ import torch
 from torch import Tensor, nn
 
 from src.model.layers import ConvBlock, GlobalLayerNorm
+from src.model.tdf_layers.global_attention import GRUBlock, TransformerBlock
 from src.model.tdf_layers.injection_sum import InjectionSum
-from src.model.tdf_layers.transformer import TransformerBlock
 
 TModule = TypeVar("TModule", bound=nn.Module)
 
@@ -29,6 +29,7 @@ class TDFBlock(nn.Module):
         ffn_dim: int = 1024,
         activation: TModule = nn.PReLU,
         norm: TModule = GlobalLayerNorm,
+        ga_type: str = "transformer",
     ):
         """
         Args:
@@ -42,6 +43,11 @@ class TDFBlock(nn.Module):
         """
         super().__init__()
         assert stage_num > 1, f"stage_num must be greater than 1, got {stage_num=}"
+        assert ga_type in [
+            "transformer",
+            "gru",
+        ], f"ga_type must be in ['transformer', 'gru'], got {ga_type=}"
+
         self.stage_num = stage_num
         self.kernel_size = kernel_size
         self.conv_dim = conv_dim
@@ -103,9 +109,12 @@ class TDFBlock(nn.Module):
             ]
         )
 
-        self.global_attention = TransformerBlock(
-            self.conv_dim, n_heads, ffn_dim, dropout
-        )
+        if ga_type == "transformer":
+            self.global_attention = TransformerBlock(
+                self.conv_dim, n_heads, ffn_dim, dropout
+            )
+        elif ga_type == "gru":
+            self.global_attention = GRUBlock(self.conv_dim, dropout)
 
     def forward(self, x: Tensor) -> Tensor:
         """
