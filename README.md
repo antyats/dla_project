@@ -2,6 +2,8 @@
 
 В проекте реализованы 4 модели: CTCNet, TDANet, IIANet, ConvTasNet
 
+ссылка на веса модели (TDFNet): https://drive.google.com/file/d/17Qj1DVkEZ1k1Y1MUrJYbcw0dn4hNQ3By/view?usp=sharing
+
 # Настройка
 
 Для начала нужно положить веса моделей:
