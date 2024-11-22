@@ -104,3 +104,37 @@ class TransformerBlock(nn.Module):
         x = x + residual
 
         return x
+
+
+class GRUBlock(nn.Module):
+    def __init__(
+        self, in_dim: int = 512, dropout: float = 0.1, norm: TModule = nn.LayerNorm
+    ):
+        """
+        Args:
+            in_dim (int, optional): Input dimensionality of the GRU block.
+            dropout (float, optional): Dropout rate.
+        """
+        super().__init__()
+        self.gru = nn.GRU(
+            in_dim, in_dim, 1, dropout=dropout, batch_first=True, bidirectional=True
+        )
+        self.norm1 = norm(in_dim)
+        self.norm2 = norm(in_dim)
+        self.proj = nn.Sequential(
+            nn.Linear(in_dim * 2, in_dim), nn.Dropout(dropout), nn.PReLU()
+        )
+
+    def forward(self, x: Tensor) -> Tensor:
+        """
+        Args:
+            x (Tensor): input shape - (batch_size, conv_dim, seq_len)
+        Returns:
+            out (Tensor): transformed tensor. Shape: (batch_size, conv_dim, seq_len)
+        """
+        residual = x
+
+        x = self.norm1(x.transpose(1, 2))
+        x = self.gru(x)[0]
+        x = self.norm2(self.proj(x)).transpose(1, 2)
+        return x + residual
