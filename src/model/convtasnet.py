@@ -1,5 +1,6 @@
 from torch import nn
-from src.model.convtasnet_layers.encoder import Encoder, TCN, Decoder
+
+from src.model.convtasnet_layers import TCN, Decoder, Encoder
 
 
 class ConvTasNet(nn.Module):
@@ -17,7 +18,6 @@ class ConvTasNet(nn.Module):
         separator_size: int = 2,
         separator_count_blocks: int = 2,
     ):
-        
         self.n_audio_channels = n_audio_channels
         self.n_output_channels = n_output_channels
 
@@ -58,12 +58,12 @@ class ConvTasNet(nn.Module):
             padding=self.decoder_padding,
             stride=self.decoder_stride,
         )
-        
-    def forward(self, mix_audio, **batch):    
+
+    def forward(self, mix_audio, **batch):
         out = self.encoder(mix_audio)
 
         out = self.separator(out)
-        
+
         out = self.decoder(out)
 
         return {"output_audio": out}
