@@ -1,0 +1,18 @@
+_target_: src.model.IIANet
+video_encoder:
+    _target_: src.model.lipreading.Lipreading
+    backbone_type: "resnet"
+    relu_type: "swish"
+    tcn_options: { "dropout": 0.2, "dwpw": False, "kernel_size": [3, 5, 7], "num_layers": 4, "width_mult": 1 }
+    width_mult: 1.0
+    extract_feats: True
+path_to_pretrained_video_extractor: "./pretrained_video_models/lrw_resnet18_mstcn_video.pth"
+audio_emb_channels: 512
+video_emb_channels: 50
+n_video_channels: 64
+hidden_audio_emb_channels: 512
+hidden_video_emb_channels: 512
+NF: 4
+NS: 12
+bottomup_depth: 4
+use_grad_checkpointing: True
