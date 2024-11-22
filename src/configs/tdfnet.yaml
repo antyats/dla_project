@@ -26,7 +26,7 @@ trainer:
     device_tensors: ["mix_audio", "video", "target_audio"] # which tensors should be on device (ex. GPU)
     # resume_from: "/home/mortie/dla_project/tdfnet_from_server_fixed1.pth" # null or path to the checkpoint dir with *.pth and config.yaml
     # from_pretrained: "/home/mortie/dla_project/tdfnet_from_server_fixed2.pth"
-    resume_from: "../continue learning on PC 15 (try to compile)/checkpoint-epoch4.pth"
+    # resume_from: "../continue learning on PC 15 (try to compile)/checkpoint-epoch4.pth"
     device: cuda # device name or "auto"
     override: False # if True, will override the previous run with the same name
     monitor: "max val_SI-SNRi" # "off" or "max/min metric_name", i.e. our goal is to maximize/minimize metric
