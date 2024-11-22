@@ -1,13 +1,14 @@
 defaults:
-  - model: baseline
-  - metrics: example
-  - datasets: example_eval # we do not want to run inference on training data
-  - dataloader: example
-  - transforms: example
-  - _self_
+    - model: tdfnet
+    - writer: wandb
+    - metrics: avss_metrics
+    - datasets: custom_dataset
+    - dataloader: dataloader
+    - transforms: spectrogram
+    - _self_
 inferencer:
-  device_tensors: ["data_object", "labels"] # which tensors should be on device (ex. GPU)
+  device_tensors: ["mix_audio", "video"] # which tensors should be on device (ex. GPU)
   device: auto # device name or "auto"
   save_path: "example" # any name here, can be a dataset name
+  from_pretrained: "/Users/antonytce/Desktop/dla_project/weights/tdfnet_best.pth"
   seed: 1
-  from_pretrained: "saved/model_best.pth" # path to the pretrained model
