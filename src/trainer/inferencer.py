@@ -129,21 +129,25 @@ class Inferencer(BaseTrainer):
         # Some saving logic. This is an example
         # Use if you need to save predictions on disk
 
-        batch_size = batch["logits"].shape[0]
+        batch_size = batch["output_audio"].shape[0]
         current_id = batch_idx * batch_size
 
         for i in range(batch_size):
             # clone because of
             # https://github.com/pytorch/pytorch/issues/1995
-            logits = batch["logits"][i].clone()
-            label = batch["labels"][i].clone()
-            pred_label = logits.argmax(dim=-1)
+            mix_audio = batch["mix_audio"][i].clone()
+            output_audio = batch["output_audio"][i].clone()
+
+            target_audio = None
+            if "target_audio" in batch:
+                target_audio = batch["target_audio"][i].clone()
 
             output_id = current_id + i
 
             output = {
-                "pred_label": pred_label,
-                "label": label,
+                "mix_audio": mix_audio,
+                "output_audio": output_audio,
+                "target_audio": target_audio,
             }
 
             if self.save_path is not None:
@@ -166,7 +170,8 @@ class Inferencer(BaseTrainer):
         self.is_train = False
         self.model.eval()
 
-        self.evaluation_metrics.reset()
+        if self.evaluation_metrics is not None:
+            self.evaluation_metrics.reset()
 
         # create Save dir
         if self.save_path is not None:
@@ -184,5 +189,5 @@ class Inferencer(BaseTrainer):
                     part=part,
                     metrics=self.evaluation_metrics,
                 )
-
-        return self.evaluation_metrics.result()
+        if self.evaluation_metrics is not None:
+            return self.evaluation_metrics.result()

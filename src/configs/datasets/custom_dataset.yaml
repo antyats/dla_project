@@ -1,9 +1,4 @@
-val:
-    _target_: src.datasets.CustomDataset
-    data_dir: "./data/inference_dataset"
-    instance_transforms: ${transforms.instance_transforms.train}
 test:
     _target_: src.datasets.CustomDataset
-    data_dir: "./data/inference_dataset"
-    limit: 1000
+    data_dir: "./data/test"
     instance_transforms: ${transforms.instance_transforms.inference}

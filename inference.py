@@ -34,11 +34,14 @@ def main(config):
     dataloaders, batch_transforms = get_dataloaders(config, device)
 
     # build model architecture, then print to console
-    model = instantiate(config.model).to(device)
+    model = instantiate(config.model)
+    if config.inferencer.get("compile_model", False):
+        model = torch.compile(model)
+    model.to(device)
     print(model)
 
     # get metrics
-    metrics = instantiate(config.metrics)
+    metrics = instantiate(config.get("metrics", None))
 
     # save_path for model predictions
     save_path = ROOT_PATH / "data" / "saved" / config.inferencer.save_path
@@ -58,9 +61,10 @@ def main(config):
     logs = inferencer.run_inference()
 
     for part in logs.keys():
-        for key, value in logs[part].items():
-            full_key = part + "_" + key
-            print(f"    {full_key:15s}: {value}")
+        if logs[part] is not None:
+            for key, value in logs[part].items():
+                full_key = part + "_" + key
+                print(f"    {full_key:15s}: {value}")
 
 
 if __name__ == "__main__":
