@@ -14,8 +14,10 @@ audio_stage_n: 5
 video_stage_n: 4
 audio_kernel_size: 5
 video_kernel_size: 3
+audio_ga_type: "gru"
+video_ga_type: "transformer"
 fusion_steps: 3
-audio_only_steps: 1
+audio_only_steps: 5
 activation:
     _target_: hydra.utils.get_class
     path: torch.nn.PReLU

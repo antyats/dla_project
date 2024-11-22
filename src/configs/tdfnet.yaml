@@ -20,9 +20,9 @@ loss_function:
     _target_: src.loss.SI_SNR
 trainer:
     log_step: 250
-    n_epochs: 100
+    n_epochs: 20
     # epoch_len: 500
-    n_grad_accum_steps: 2
+    n_grad_accum_steps: 1
     device_tensors: ["mix_audio", "video", "target_audio"] # which tensors should be on device (ex. GPU)
     # resume_from: "/home/mortie/dla_project/tdfnet_from_server_fixed1.pth" # null or path to the checkpoint dir with *.pth and config.yaml
     # from_pretrained: "/home/mortie/dla_project/tdfnet_from_server_fixed2.pth"
