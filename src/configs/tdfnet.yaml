@@ -41,3 +41,9 @@ trainer:
     compile_model: True
     max_grad_norm: 5
     lr_scheduler_mode: "epoch"
+inferencer:
+    device_tensors: ["mix_audio", "video"] # which tensors should be on device (ex. GPU)
+    device: cuda # device name or "auto"
+    override: False # if True, will override the previous run with the same name
+    from_pretrained: "/Users/antonytce/Desktop/dla_project/weights/tdfnet_best.pth"
+    seed: 1
