@@ -14,32 +14,21 @@ class GlobalLayerNorm(nn.Module):
 
 
 class BottomUp(nn.Module):
-    def __init__(self, in_channels=512, out_channels=512, depth=4):
+    def __init__(self, channels=512, depth=4):
         super().__init__()
 
         self.depth = depth
-
-        if in_channels != out_channels:
-            self.align_channels = nn.Sequential(
-                nn.Conv1d(in_channels, out_channels, 1),
-                GlobalLayerNorm(out_channels),
-            )
-        else:
-            self.align_channels = nn.Identity()
-
         self.convs = nn.ModuleList()
         for i in range(depth):
             self.convs.append(
                 nn.Sequential(
-                    nn.Conv1d(
-                        out_channels, out_channels, kernel_size=5, stride=2, padding=2
-                    ),
-                    GlobalLayerNorm(out_channels),
+                    nn.Conv1d(channels, channels, kernel_size=5, stride=2, padding=2),
+                    GlobalLayerNorm(channels),
                 )
             )
 
     def forward(self, emb):
-        outputs = [self.align_channels(emb)]
+        outputs = [emb]
         for i in range(self.depth):
             outputs.append(self.convs[i](outputs[-1]))
 
@@ -161,20 +150,18 @@ class InterA_B(nn.Module):
 class FusionBlock(nn.Module):
     def __init__(
         self,
-        audio_in_channels=512,
-        video_in_channels=512,
-        audio_out_channels=512,
-        video_out_channels=512,
+        audio_channels=512,
+        video_channels=512,
         depth=4,
     ):
         super().__init__()
 
         self.depth = depth
-        self.bottom_up_audio = BottomUp(audio_in_channels, audio_out_channels, depth)
-        self.bottom_up_video = BottomUp(video_in_channels, video_out_channels, depth)
+        self.bottom_up_audio = BottomUp(audio_channels, depth)
+        self.bottom_up_video = BottomUp(video_channels, depth)
 
-        self.inter_a_t = InterA_T(audio_out_channels, video_out_channels)
-        self.inter_a_b = InterA_B(audio_out_channels, video_out_channels)
+        self.inter_a_t = InterA_T(audio_channels, video_channels)
+        self.inter_a_b = InterA_B(audio_channels, video_channels)
 
         self.external_intra_a_audio = nn.ModuleList()
         self.external_intra_a_video = nn.ModuleList()
@@ -185,23 +172,15 @@ class FusionBlock(nn.Module):
         self.inter_a_m = nn.ModuleList()
 
         for i in range(depth):
-            self.external_intra_a_audio.append(
-                IntraA(audio_out_channels, audio_out_channels)
-            )
-            self.external_intra_a_video.append(
-                IntraA(video_out_channels, video_out_channels)
-            )
+            self.external_intra_a_audio.append(IntraA(audio_channels, audio_channels))
+            self.external_intra_a_video.append(IntraA(video_channels, video_channels))
 
         for i in range(depth - 1):
-            self.internal_intra_a_audio.append(
-                IntraA(audio_out_channels, audio_out_channels)
-            )
-            self.internal_intra_a_video.append(
-                IntraA(video_out_channels, video_out_channels)
-            )
+            self.internal_intra_a_audio.append(IntraA(audio_channels, audio_channels))
+            self.internal_intra_a_video.append(IntraA(video_channels, video_channels))
 
         for i in range(depth):
-            self.inter_a_m.append(InterA_M(audio_out_channels, video_out_channels))
+            self.inter_a_m.append(InterA_M(audio_channels, video_channels))
 
     def forward(self, es, ev):
         s, fs = self.bottom_up_audio(es)
@@ -224,26 +203,22 @@ class FusionBlock(nn.Module):
 
 
 class AudioBlock(nn.Module):
-    def __init__(self, audio_in_channels, audio_out_channels, depth=4):
+    def __init__(self, audio_channels=512, depth=4):
         super().__init__()
 
         self.depth = depth
-        self.bottom_up_audio = BottomUp(audio_in_channels, audio_out_channels, depth)
+        self.bottom_up_audio = BottomUp(audio_channels, depth)
 
-        self.ffn_s = FFNblock(audio_out_channels)
+        self.ffn_s = FFNblock(audio_channels)
 
         self.external_intra_a_audio = nn.ModuleList()
         self.internal_intra_a_audio = nn.ModuleList()
 
         for i in range(depth):
-            self.external_intra_a_audio.append(
-                IntraA(audio_out_channels, audio_out_channels)
-            )
+            self.external_intra_a_audio.append(IntraA(audio_channels, audio_channels))
 
         for i in range(depth - 1):
-            self.internal_intra_a_audio.append(
-                IntraA(audio_out_channels, audio_out_channels)
-            )
+            self.internal_intra_a_audio.append(IntraA(audio_channels, audio_channels))
 
     def forward(self, es):
         s, fs = self.bottom_up_audio(es)
@@ -263,10 +238,8 @@ class SeparationNetwork(nn.Module):
         self,
         NF=4,
         NS=12,
-        audio_in_channels=512,
-        video_in_channels=50,
-        audio_out_channels=512,
-        video_out_channels=512,
+        audio_channels=512,
+        video_channels=512,
         depth=4,
         use_grad_checkpointing=True,
     ):
@@ -275,51 +248,23 @@ class SeparationNetwork(nn.Module):
         self.NS = NS
         self.use_grad_checkpointing = use_grad_checkpointing
 
-        self.fusion_blocks = nn.ModuleList()
-        self.audio_blocks = nn.ModuleList()
-
-        for i in range(NF):
-            if i == 0:
-                self.fusion_blocks.append(
-                    FusionBlock(
-                        audio_in_channels,
-                        video_in_channels,
-                        audio_out_channels,
-                        video_out_channels,
-                        depth,
-                    )
-                )
-            else:
-                self.fusion_blocks.append(
-                    FusionBlock(
-                        audio_out_channels,
-                        video_out_channels,
-                        audio_out_channels,
-                        video_out_channels,
-                        depth,
-                    )
-                )
-
-        for i in range(NS):
-            if NF == 0 and i == 0:
-                self.audio_blocks.append(
-                    AudioBlock(audio_in_channels, audio_out_channels, depth)
-                )
-            else:
-                self.audio_blocks.append(
-                    AudioBlock(audio_out_channels, audio_out_channels, depth)
-                )
+        self.fusion_block = FusionBlock(
+            audio_channels,
+            video_channels,
+            depth,
+        )
+        self.audio_block = AudioBlock(audio_channels, depth)
 
     def _checkpoint(self, module, *inputs):
         if self.use_grad_checkpointing:
-            return checkpoint(module, *inputs)
+            return checkpoint(module, *inputs, use_reentrant=False)
         return module(*inputs)
 
     def forward(self, es, ev):
         for i in range(self.NF):
-            es, ev = self._checkpoint(self.fusion_blocks[i], es, ev)
+            es, ev = self._checkpoint(self.fusion_block, es, ev)
         for i in range(self.NS):
-            es = self._checkpoint(self.audio_blocks[i], es)
+            es = self._checkpoint(self.audio_block, es)
         return es
 
 
@@ -357,6 +302,17 @@ class AudioDecoder(nn.Module):
         return self.decoder(emb)
 
 
+class AlignChannels(nn.Module):
+    def __init__(self, in_channels, out_channels):
+        super().__init__()
+        self.align = nn.Identity()
+        if in_channels != out_channels:
+            self.align = nn.Conv1d(in_channels, out_channels, 1, bias=False)
+
+    def forward(self, x):
+        return self.align(x)
+
+
 class IIANet(nn.Module):
     def __init__(
         self,
@@ -372,9 +328,17 @@ class IIANet(nn.Module):
         use_grad_checkpointing: bool = True,
     ):
         super().__init__()
-        assert (
-            audio_emb_channels == hidden_audio_emb_channels
-        ), "audio_emb_channels != hidden_audio_emb_channels"
+
+        self.align_audio_emb_before_sep = AlignChannels(
+            audio_emb_channels, hidden_audio_emb_channels
+        )
+        self.align_video_emb_before_sep = AlignChannels(
+            video_emb_channels, hidden_video_emb_channels
+        )
+
+        self.align_audio_emb_after_sep = AlignChannels(
+            hidden_audio_emb_channels, audio_emb_channels
+        )
 
         self.video_encoder = video_encoder
         self._load_video_encoder(path_to_pretrained_video_encoder)
@@ -384,10 +348,8 @@ class IIANet(nn.Module):
         self.separation = SeparationNetwork(
             NF=NF,
             NS=NS,
-            audio_in_channels=audio_emb_channels,
-            video_in_channels=video_emb_channels,
-            audio_out_channels=hidden_audio_emb_channels,
-            video_out_channels=hidden_video_emb_channels,
+            audio_channels=hidden_audio_emb_channels,
+            video_channels=hidden_video_emb_channels,
             depth=bottomup_depth,
             use_grad_checkpointing=use_grad_checkpointing,
         )
@@ -395,12 +357,20 @@ class IIANet(nn.Module):
     def forward(self, mix_audio, video, **batch):
         es = self.audio_encoder(mix_audio)
         ev = self.video_encoder(video, lengths=None)
-        M = F.relu(self.separation(es, ev))
+
+        es_aligned = self.align_audio_emb_before_sep(es)
+        ev_aligned = self.align_video_emb_before_sep(ev)
+
+        M = self.separation(es_aligned, ev_aligned)
+        M = self.align_audio_emb_after_sep(M)
+        M = F.relu(M)
         audio = self.audio_decoder(es * M)
         return {"output_audio": audio}
 
     def _load_video_encoder(self, path):
-        self.video_encoder.load_state_dict(torch.load(path)["model_state_dict"])
+        self.video_encoder.load_state_dict(
+            torch.load(path, map_location="cpu")["model_state_dict"]
+        )
         for param in self.video_encoder.parameters():
             param.requires_grad = False
 
