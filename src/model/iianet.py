@@ -298,9 +298,14 @@ class SeparationNetwork(nn.Module):
                 )
 
         for i in range(NS):
-            self.audio_blocks.append(
-                AudioBlock(audio_out_channels, audio_out_channels, depth)
-            )
+            if NF == 0 and i == 0:
+                self.audio_blocks.append(
+                    AudioBlock(audio_in_channels, audio_out_channels, depth)
+                )
+            else:
+                self.audio_blocks.append(
+                    AudioBlock(audio_out_channels, audio_out_channels, depth)
+                )
 
     def forward(self, es, ev):
         for i in range(self.NF):
@@ -358,12 +363,12 @@ class IIANet(nn.Module):
         bottomup_depth: int = 4,
     ):
         super().__init__()
+        assert (
+            audio_emb_channels == hidden_audio_emb_channels
+        ), "audio_emb_channels != hidden_audio_emb_channels"
+
         self.video_encoder = video_encoder
-        self.video_encoder.load_state_dict(
-            torch.load(path_to_pretrained_video_encoder, map_location="cpu")[
-                "model_state_dict"
-            ]
-        )
+        self._load_video_encoder(path_to_pretrained_video_encoder)
 
         self.audio_encoder = AudioEncoder(audio_emb_channels)
         self.audio_decoder = AudioDecoder(hidden_audio_emb_channels)
@@ -378,9 +383,25 @@ class IIANet(nn.Module):
         )
 
     def forward(self, mix_audio, video, **batch):
-        print(mix_audio.shape)
-        print("***")
         es = self.audio_encoder(mix_audio)
         ev = self.video_encoder(video, lengths=None)
         M = F.relu(self.separation(es, ev))
-        return self.audio_decoder(es * M)
+        audio = self.audio_decoder(es * M)
+        return {"output_audio": audio}
+
+    def _load_video_encoder(self, path):
+        self.video_encoder.load_state_dict(torch.load(path)["model_state_dict"])
+        for param in self.video_encoder.parameters():
+            param.requires_grad = False
+
+    def __str__(self):
+        all_parameters = sum([p.numel() for p in self.parameters()])
+        trainable_parameters = sum(
+            [p.numel() for p in self.parameters() if p.requires_grad]
+        )
+
+        result_info = super().__str__()
+        result_info = result_info + f"\nAll parameters: {all_parameters}"
+        result_info = result_info + f"\nTrainable parameters: {trainable_parameters}"
+
+        return result_info
