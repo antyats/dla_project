@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.utils.checkpoint import checkpoint
 
 
 class GlobalLayerNorm(nn.Module):
@@ -267,10 +268,12 @@ class SeparationNetwork(nn.Module):
         audio_out_channels=512,
         video_out_channels=512,
         depth=4,
+        use_grad_checkpointing=True,
     ):
         super().__init__()
         self.NF = NF
         self.NS = NS
+        self.use_grad_checkpointing = use_grad_checkpointing
 
         self.fusion_blocks = nn.ModuleList()
         self.audio_blocks = nn.ModuleList()
@@ -307,11 +310,16 @@ class SeparationNetwork(nn.Module):
                     AudioBlock(audio_out_channels, audio_out_channels, depth)
                 )
 
+    def _checkpoint(self, module, *inputs):
+        if self.use_grad_checkpointing:
+            return checkpoint(module, *inputs)
+        return module(*inputs)
+
     def forward(self, es, ev):
         for i in range(self.NF):
-            es, ev = self.fusion_blocks[i](es, ev)
+            es, ev = self._checkpoint(self.fusion_blocks[i], es, ev)
         for i in range(self.NS):
-            es = self.audio_blocks[i](es)
+            es = self._checkpoint(self.audio_blocks[i], es)
         return es
 
 
@@ -361,6 +369,7 @@ class IIANet(nn.Module):
         NF: int = 4,
         NS: int = 12,
         bottomup_depth: int = 4,
+        use_grad_checkpointing: bool = True,
     ):
         super().__init__()
         assert (
@@ -380,6 +389,7 @@ class IIANet(nn.Module):
             audio_out_channels=hidden_audio_emb_channels,
             video_out_channels=hidden_video_emb_channels,
             depth=bottomup_depth,
+            use_grad_checkpointing=use_grad_checkpointing,
         )
 
     def forward(self, mix_audio, video, **batch):
