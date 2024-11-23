@@ -1,6 +1,6 @@
 # DLA project: Audio-Visual Source Separation
 
-##About
+## About
 This repository provides implementations of several models for audio-visual source separation. The models in this repository are heavily based on the following papers (however, they are not strict implementations of them):
 
 
