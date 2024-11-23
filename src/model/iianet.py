@@ -45,10 +45,13 @@ class FFNblock(nn.Module):
         self.ffn = nn.Sequential(
             nn.Conv1d(channels, 2 * channels, kernel_size=1, bias=False),
             nn.ReLU(),
+            nn.Dropout(0.1),
             nn.Conv1d(2 * channels, 2 * channels, kernel_size=5, bias=True),
             nn.ReLU(),
+            nn.Dropout(0.1),
             nn.Conv1d(2 * channels, channels, kernel_size=1, bias=False),
             nn.ReLU(),
+            nn.Dropout(0.1),
             GlobalLayerNorm(channels),
         )
 
