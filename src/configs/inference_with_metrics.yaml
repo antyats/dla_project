@@ -1,0 +1,15 @@
+defaults:
+    - model: tdfnet
+    - writer: wandb
+    - metrics: avss_metrics
+    - datasets: custom_dataset
+    - dataloader: dataloader
+    - transforms: spectrogram
+    - _self_
+inferencer:
+  device_tensors: ["mix_audio", "video", "target_audio"] # which tensors should be on device (ex. GPU)
+  device: auto # device name or "auto"
+  save_path: "example" # any name here, can be a dataset name
+  from_pretrained: "/home/mortie/dla_project/model_best_tdf_gru.pth"
+  compile_model: True
+  seed: 1

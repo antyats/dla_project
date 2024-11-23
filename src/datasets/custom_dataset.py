@@ -7,7 +7,7 @@ from src.utils.io_utils import read_json, write_json
 
 
 class CustomDataset(BaseDataset):
-    def __init__(self, data_dir, part, *args, **kwargs):
+    def __init__(self, data_dir, *args, **kwargs):
         if type(data_dir) is str:
             data_dir = Path(data_dir)
         assert data_dir.is_dir(), f"The folder {data_dir} does not exist"
@@ -17,11 +17,11 @@ class CustomDataset(BaseDataset):
         if self.index_path.exists():
             index = read_json(str(self.index_path))
         else:
-            index = self._create_index(data_dir, part)
+            index = self._create_index(data_dir)
 
         super().__init__(index, *args, **kwargs)
 
-    def _create_index(self, data_dir, part):
+    def _create_index(self, data_dir):
         index = []
         audio_files = [
             path

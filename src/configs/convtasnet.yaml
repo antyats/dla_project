@@ -1,32 +1,28 @@
 defaults:
-    - model: tdfnet
+    - model: convtasnet
     - writer: wandb
     - metrics: avss_metrics
     - datasets: full_dataset
-    - dataloader: dataloader
-    - transforms: spectrogram
+    - dataloader: example
+    - transforms: no_transforms
     - _self_
 optimizer:
     _target_: torch.optim.AdamW
-    lr: 1e-4
+    lr: 1e-3
     weight_decay: 1e-1
     maximize: True
 lr_scheduler:
     _target_: torch.optim.lr_scheduler.ReduceLROnPlateau
     mode: max
     factor: 0.5
-    patience: 2
+    patience: 5
 loss_function:
     _target_: src.loss.SI_SNR
 trainer:
     log_step: 250
-    n_epochs: 20
-    # epoch_len: 500
+    n_epochs: 100
     n_grad_accum_steps: 1
-    device_tensors: ["mix_audio", "video", "target_audio"] # which tensors should be on device (ex. GPU)
-    # resume_from: "/home/mortie/dla_project/tdfnet_from_server_fixed1.pth" # null or path to the checkpoint dir with *.pth and config.yaml
-    # from_pretrained: "/home/mortie/dla_project/tdfnet_from_server_fixed2.pth"
-    # resume_from: "../continue learning on PC 15 (try to compile)/checkpoint-epoch4.pth"
+    device_tensors: ["mix_audio", "target_audio"] # which tensors should be on device (ex. GPU)
     device: cuda # device name or "auto"
     override: False # if True, will override the previous run with the same name
     monitor: "max val_SI-SNRi" # "off" or "max/min metric_name", i.e. our goal is to maximize/minimize metric
@@ -41,9 +37,3 @@ trainer:
     compile_model: True
     max_grad_norm: 5
     lr_scheduler_mode: "epoch"
-inferencer:
-    device_tensors: ["mix_audio", "video"] # which tensors should be on device (ex. GPU)
-    device: cuda # device name or "auto"
-    override: False # if True, will override the previous run with the same name
-    from_pretrained: "/Users/antonytce/Desktop/dla_project/weights/tdfnet_best.pth"
-    seed: 1
