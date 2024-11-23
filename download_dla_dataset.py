@@ -42,7 +42,13 @@ def main():
         description="Download dla dataset from Yandex Disk."
     )
     parser.add_argument("url", type=str, help="Link to the file on Yandex Disk")
-    parser.add_argument("dir", type=Path, help="The folder to download dataset to")
+    parser.add_argument(
+        "dir",
+        type=Path,
+        nargs="?",
+        default=Path("./data/dla_dataset"),
+        help="The folder to download dataset to",
+    )
     parser.add_argument(
         "--extract", action="store_true", help="Extract the zip-file after download"
     )
