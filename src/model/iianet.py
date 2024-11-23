@@ -35,7 +35,7 @@ class BottomUp(nn.Module):
         pooled_sum = outputs[-1]
         pooling_size = outputs[-1].shape[-1]
         for i in range(self.depth - 1):
-            pooled_sum += F.adaptive_avg_pool1d(outputs[i], pooling_size)
+            pooled_sum = pooled_sum + F.adaptive_avg_pool1d(outputs[i], pooling_size)
         return outputs, pooled_sum
 
 
@@ -77,8 +77,8 @@ class InterA_T(nn.Module):
     def forward(self, audio, video):
         audio_interpolate = F.interpolate(audio, size=video.shape[-1], mode="nearest")
         video_interpolate = F.interpolate(video, size=audio.shape[-1], mode="nearest")
-        audio *= F.sigmoid(self.conv_video(video_interpolate))
-        video *= F.sigmoid(self.conv_audio(audio_interpolate))
+        audio = audio * F.sigmoid(self.conv_video(video_interpolate))
+        video = video * F.sigmoid(self.conv_audio(audio_interpolate))
         return self.ffn_a(audio), self.ffn_v(video)
 
 
@@ -96,8 +96,8 @@ class IntraA(nn.Module):
 
     def forward(self, x, y):
         y_interpolate = F.interpolate(y, size=x.shape[-1], mode="nearest")
-        x *= F.sigmoid(self.conv1(y_interpolate))
-        x += self.conv2(y_interpolate)
+        x = x * F.sigmoid(self.conv1(y_interpolate))
+        x = x + self.conv2(y_interpolate)
         return x
 
 
@@ -111,7 +111,7 @@ class InterA_M(nn.Module):
 
     def forward(self, audio, video):
         video_interpolate = F.interpolate(video, audio.shape[-1], mode="nearest")
-        audio *= F.sigmoid(self.conv(video_interpolate))
+        audio = audio * F.sigmoid(self.conv(video_interpolate))
         return audio
 
 
@@ -141,11 +141,11 @@ class InterA_B(nn.Module):
 
         audio_fused = F.sigmoid(self.conv1_audio(audio)) * video_interpolate
         audio_fused = self.conv2_audio(audio_fused)
-        audio_fused += audio
+        audio_fused = audio_fused + audio
 
         video_fused = F.sigmoid(self.conv1_video(video)) * audio_interpolate
         video_fused = self.conv2_video(video_fused)
-        video_fused += video
+        video_fused = video_fused + video
 
         return audio_fused, video_fused
 
