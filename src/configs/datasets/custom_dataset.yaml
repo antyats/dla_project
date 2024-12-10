@@ -1,4 +1,4 @@
 test:
     _target_: src.datasets.CustomDataset
-    data_dir: "./data/test"
+    data_dir: "./data/val"
     instance_transforms: ${transforms.instance_transforms.inference}

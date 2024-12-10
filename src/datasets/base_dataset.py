@@ -85,6 +85,7 @@ class BaseDataset(Dataset):
 
         instance_data = {
             "mix_audio": mix_audio,
+            "mix_audio_path": mix_audio_path,
             "mix_audio_len": mix_audio.size(-1),
             "video1": speaker1_video,
             "video1_len": speaker1_video.size(0),

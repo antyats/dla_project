@@ -20,6 +20,10 @@ def collate_fn(dataset_items: list[dict]):
         [item["mix_audio"] for item in dataset_items], batch_first=True
     ).repeat(2, 1, 1)
 
+    batch["mix_audio_path"] = [item["mix_audio_path"] for item in dataset_items] + [
+        item["mix_audio_path"] for item in dataset_items
+    ]
+
     batch["mix_audio_len"] = torch.tensor(
         [item["mix_audio_len"] for item in dataset_items]
     ).repeat(2, 1, 1)

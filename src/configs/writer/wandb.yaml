@@ -1,8 +1,8 @@
 _target_: src.logger.WandBWriter
 project_name: "dla_avss_project_test"
 entity: null
-run_name: "Final: TDF with GRU in audio 2"
-mode: "offline"
+run_name: "iianet 4 fusion 6 audio decrease bs"
+mode: "online"
 loss_names: ["loss"] # which losses to log (useful for multi-loss tasks, s.a. GANs)
 log_checkpoints: False # set to True if you want to log save_dir with checkpoints to W&B
 id_length: 8 # length of the run_id

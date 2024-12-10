@@ -1,4 +1,7 @@
+import os
+
 import torch
+import torchaudio
 from tqdm.auto import tqdm
 
 from src.metrics.tracker import MetricTracker
@@ -130,29 +133,28 @@ class Inferencer(BaseTrainer):
         # Use if you need to save predictions on disk
 
         batch_size = batch["output_audio"].shape[0]
-        current_id = batch_idx * batch_size
 
         for i in range(batch_size):
             # clone because of
             # https://github.com/pytorch/pytorch/issues/1995
-            mix_audio = batch["mix_audio"][i].clone()
             output_audio = batch["output_audio"][i].clone()
-
-            target_audio = None
-            if "target_audio" in batch:
-                target_audio = batch["target_audio"][i].clone()
-
-            output_id = current_id + i
-
-            output = {
-                "mix_audio": mix_audio,
-                "output_audio": output_audio,
-                "target_audio": target_audio,
-            }
+            mix_audio_path = batch["mix_audio_path"][i]
 
             if self.save_path is not None:
                 # you can use safetensors or other lib here
-                torch.save(output, self.save_path / part / f"output_{output_id}.pth")
+                folder = "s1" if i < batch_size // 2 else "s2"
+                if not os.path.exists(self.save_path / part / folder):
+                    os.makedirs(self.save_path / part / folder)
+                torchaudio.save(
+                    str(
+                        self.save_path
+                        / part
+                        / folder
+                        / str(mix_audio_path).split("/")[-1]
+                    ),
+                    output_audio.cpu(),
+                    16000,
+                )
 
         return batch
 
