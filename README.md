@@ -131,3 +131,12 @@ To run inference (evaluate the model or save predictions):
 ```bash
 python3 inference.py HYDRA_CONFIG_ARGUMENTS
 ```
+
+To calculate metrics, use `compute_metrics.py` script. You need to pass 3 arguments:
+1. \<preds\-path\> - path to predictions folder. It must contain `s1` and `s2` folders with `wav`-files in it.
+2. \<ground-truth-path\> - path to folder with ground truth audios. It must contain `s1` and `s2` folders with `wav`-files in it.
+3. \<source-path\> - path to folder with source audios. It must contain `mix` folder with `wav`-files in it. (source audios are needed for `SI-SNRi` and `SDRi` metrics computations)
+
+```bash
+python3 compute_metrics.py <preds-path> <ground-truth-path> <source-path>
+```
