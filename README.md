@@ -24,8 +24,9 @@ cd dla_project
 ```bash
 pip install gdown
 mkdir pretrained_video_models
-gdown https://drive.google.com/uc?id=1vqMpxZ5LzJjg50HlZdj_QFJGm2gQmDUD --fuzzy --output
-"./pretrained_video_models/"
+gdown https://drive.google.com/uc?id=1vqMpxZ5LzJjg50HlZdj_QFJGm2gQmDUD \
+--fuzzy \
+--output "./pretrained_video_models/"
 ```
 
 3. Create and activate new environment using [`conda`](https://conda.io/projects/conda/en/latest/user-guide/getting-started.html) or `venv` ([`+pyenv`](https://github.com/pyenv/pyenv)).
@@ -115,11 +116,10 @@ Our best models perfomance
 
 *There were 3 runs for TDFNet as one training procedure.*
 
-
 ## How To Use
 
-### To run inference
-
+###To run inference###
+For tdfnet (our best model):
 ```bash
 python3 inference.py \
 datasets.test.data_dir=<PATH/TO/CUSTOM/DATASET/DIR> \
@@ -127,11 +127,23 @@ inferencer.save_path=<PATH/TO/SAVE/PREDICTIONS/TO> \
 inferencer.from_pretrained=<PATH/TO/PREATRAINED/MODEL> \
 model.path_to_pretrained_video_extractor=<PATH/TO/PRETRAINED/LIPREADING/MODEL>
 ```
-Add this at the end of the command if you want to evaluate the metrics
+
+For ctcnet:
+```bash
+python3 inference.py \
+model=ctcnet \
+datasets.test.data_dir=<PATH/TO/CUSTOM/DATASET/DIR> \
+inferencer.save_path=<PATH/TO/SAVE/PREDICTIONS/TO> \
+inferencer.from_pretrained=<PATH/TO/PREATRAINED/MODEL> \
+model.path_to_pretrained_video_extractor=<PATH/TO/PRETRAINED/LIPREADING/MODEL>
+```
+
+Add this at the end of the command if you want to evaluate metrics
 ```bash
 +metrics=avss_metrics
 ```
-### To calculate metrics
+
+###To calculate metrics###
 Use `compute_metrics.py` script. You need to pass 3 arguments:
 1. \<preds\-path\> - path to predictions folder. It must contain `s1` and `s2` folders with `wav`-files in it.
 2. \<ground-truth-path\> - path to folder with ground truth audios. It must contain `s1` and `s2` folders with `wav`-files in it.
