@@ -118,21 +118,21 @@ Our best models perfomance
 
 ## How To Use
 
-To train a model, run the following command:
+###To run inference###
 
 ```bash
-python3 train.py -cn=CONFIG_NAME HYDRA_CONFIG_ARGUMENTS
+python3 inference.py \
+datasets.test.data_dir=<PATH/TO/CUSTOM/DATASET/DIR> \
+inferencer.save_path=<PATH/TO/SAVE/PREDICTIONS/TO> \
+inferencer.from_pretrained=<PATH/TO/PREATRAINED/MODEL> \
+model.path_to_pretrained_video_extractor=<PATH/TO/PRETRAINED/LIPREADING/MODEL>
 ```
-
-Where `CONFIG_NAME` is a config from `src/configs` and `HYDRA_CONFIG_ARGUMENTS` are optional arguments.
-
-To run inference (evaluate the model or save predictions):
-
+Add this at the end of the command if you want to evaluate the metrics
 ```bash
-python3 inference.py HYDRA_CONFIG_ARGUMENTS
++metrics=avss_metrics
 ```
-
-To calculate metrics, use `compute_metrics.py` script. You need to pass 3 arguments:
+###To calculate metrics###
+Use `compute_metrics.py` script. You need to pass 3 arguments:
 1. \<preds\-path\> - path to predictions folder. It must contain `s1` and `s2` folders with `wav`-files in it.
 2. \<ground-truth-path\> - path to folder with ground truth audios. It must contain `s1` and `s2` folders with `wav`-files in it.
 3. \<source-path\> - path to folder with source audios. It must contain `mix` folder with `wav`-files in it. (source audios are needed for `SI-SNRi` and `SDRi` metrics computations)
