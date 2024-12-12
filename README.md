@@ -118,7 +118,7 @@ Our best models perfomance
 
 ## How To Use
 
-###To run inference###
+### To run inference
 
 ```bash
 python3 inference.py \
@@ -131,7 +131,7 @@ Add this at the end of the command if you want to evaluate the metrics
 ```bash
 +metrics=avss_metrics
 ```
-###To calculate metrics###
+### To calculate metrics
 Use `compute_metrics.py` script. You need to pass 3 arguments:
 1. \<preds\-path\> - path to predictions folder. It must contain `s1` and `s2` folders with `wav`-files in it.
 2. \<ground-truth-path\> - path to folder with ground truth audios. It must contain `s1` and `s2` folders with `wav`-files in it.
